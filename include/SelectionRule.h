@@ -18,6 +18,19 @@ enum SELECT_EIGENVALUE
     BOTH_ENDS
 };
 
+enum SELECT_EIGENVALUE_ALIAS
+{
+    WHICH_LM = 0,
+    WHICH_LR,
+    WHICH_LI,
+    WHICH_LA,
+    WHICH_SM,
+    WHICH_SR,
+    WHICH_SI,
+    WHICH_SA,
+    WHICH_BE
+};
+
 // Default comparator: largest value come on the left
 // This covers [float, double] x [LARGEST_REAL, LARGEST_ALGE]
 //
