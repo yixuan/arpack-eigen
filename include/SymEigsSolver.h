@@ -6,9 +6,12 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
-#include "MatOp.h"
 
-template <typename Scalar>
+#include "MatOp.h"
+#include "SelectionRule.h"
+
+
+template <typename Scalar = double, int SelectionRule = LARGEST_MAGN>
 class SymEigsSolver
 {
 private:
@@ -124,12 +127,13 @@ private:
         Matrix evecs = eig.eigenvectors();
 
         std::vector<SortPair> pairs(ncv);
+        EigenvalueComparator<Scalar, SelectionRule> comp;
         for(int i = 0; i < ncv; i++)
         {
             pairs[i].first = evals[i];
             pairs[i].second = i;
         }
-        std::sort(pairs.begin(), pairs.end(), compare_eigenvalue);
+        std::sort(pairs.begin(), pairs.end(), comp);
 
         for(int i = 0; i < ncv; i++)
         {
