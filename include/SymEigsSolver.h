@@ -134,6 +134,17 @@ private:
             pairs[i].second = i;
         }
         std::sort(pairs.begin(), pairs.end(), comp);
+        // For BOTH_ENDS, the eigenvalues are sorted according
+        // to the LARGEST_ALGE rule, so we need to move those smallest
+        // values to the left
+        if(SelectionRule == BOTH_ENDS)
+        {
+            int offset = (nev + 1) / 2;
+            for(int i = 0; i < nev - offset; i++)
+            {
+                std::swap(pairs[offset + i], pairs[ncv - 1 - i]);
+            }
+        }
 
         for(int i = 0; i < ncv; i++)
         {
