@@ -20,6 +20,10 @@ enum SELECT_EIGENVALUE
 
 // Default comparator: largest value come on the left
 // This covers [float, double] x [LARGEST_REAL, LARGEST_ALGE]
+//
+// BOTH_ENDS will also be attributed to this case, and we need
+// to move those smallest values to the proper locations.
+// This is done in SymEigsSolver.h => retrieve_ritzpair()
 template <typename Scalar, int SelectionRule>
 class EigenvalueComparator
 {
@@ -28,7 +32,7 @@ public:
 
     bool operator() (SortPair v1, SortPair v2)
     {
-        return std::abs(v1.first) > std::abs(v2.first);
+        return v1.first > v2.first;
     }
 };
 
