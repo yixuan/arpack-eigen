@@ -15,6 +15,7 @@ private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
     typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> Array;
+    typedef Eigen::Array<bool, Eigen::Dynamic, 1> BoolArray;
     typedef Eigen::Map<const Matrix> MapMat;
     typedef Eigen::SelfAdjointEigenSolver<Matrix> EigenSolver;
     typedef Eigen::HouseholderQR<Matrix> QRdecomp;
@@ -32,6 +33,7 @@ private:
 
     Vector ritz_val;
     Matrix ritz_vec;
+    BoolArray ritz_conv;
 
     // Arnoldi factorization
     void factorize_from(int from_k, int to_m, const Vector &fk)
@@ -130,7 +132,9 @@ private:
         Scalar prec = std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(2.0 / 3));
         Array bound = tol * ritz_val.head(nev).array().abs().max(prec);
         Array resid =  ritz_vec.bottomRows(1).transpose().array().abs() * fac_f.norm();
-        return (resid < bound).all();
+        ritz_conv = (resid < bound);
+
+        return ritz_conv.all();
     }
 
     void init()
@@ -138,6 +142,9 @@ private:
         fac_V.setZero();
         fac_H.setZero();
         fac_f.setZero();
+        ritz_val.setZero();
+        ritz_vec.setZero();
+        ritz_conv.setZero();
 
         Vector v = Vector::Random(dim_n);
         v.normalize();
@@ -160,7 +167,8 @@ public:
         fac_H(ncv, ncv),
         fac_f(dim_n),
         ritz_val(ncv),
-        ritz_vec(ncv, nev)
+        ritz_vec(ncv, nev),
+        ritz_conv(nev)
     {
         init();
     }
@@ -183,7 +191,23 @@ public:
 
     Vector eigenvalues()
     {
-        return ritz_val.head(nev);
+        int nconv = ritz_conv.cast<int>().sum();
+        Vector res(nconv);
+
+        if(!nconv)
+            return res;
+
+        int j = 0;
+        for(int i = 0; i < nev; i++)
+        {
+            if(ritz_conv[i])
+            {
+                res[j] = ritz_val[i];
+                j++;
+            }
+        }
+
+        return res;
     }
 };
 
