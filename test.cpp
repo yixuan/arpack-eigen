@@ -2,6 +2,7 @@
 #include <iostream>
 
 using Eigen::MatrixXd;
+using Eigen::VectorXd;
 
 int main()
 {
@@ -18,7 +19,12 @@ int main()
     SymEigsSolver<double> eigs(&op, k, m);
     int niter = eigs.compute();
 
-    std::cout << "computed eigenvalues = \n" << eigs.eigenvalues() << "\n\n";
+    VectorXd evals = eigs.eigenvalues();
+    MatrixXd evecs = eigs.eigenvectors();
+
+    std::cout << "computed eigenvalues D = \n" << evals << "\n\n";
+    std::cout << "computed eigenvectors U = \n" << evecs << "\n\n";
+    std::cout << "AU - UD = \n" << A * evecs - evecs * evals.asDiagonal() << "\n\n";
     std::cout << "niter = " << niter << std::endl;
 
     return 0;
