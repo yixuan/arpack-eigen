@@ -209,6 +209,28 @@ public:
 
         return res;
     }
+
+    Matrix eigenvectors()
+    {
+        int nconv = ritz_conv.cast<int>().sum();
+        Matrix res(dim_n, nconv);
+
+        if(!nconv)
+            return res;
+
+        Matrix ritz_vec_conv(ncv, nconv);
+        int j = 0;
+        for(int i = 0; i < nev; i++)
+        {
+            if(ritz_conv[i])
+            {
+                ritz_vec_conv.col(j) = ritz_vec.col(i);
+                j++;
+            }
+        }
+
+        return fac_V * ritz_vec_conv;
+    }
 };
 
 #endif // SYMEIGSSOLVER_H
