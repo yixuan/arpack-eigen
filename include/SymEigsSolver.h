@@ -6,21 +6,22 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
+#include "MatOp.h"
 
+template <typename Scalar>
 class SymEigsSolver
 {
 private:
-    typedef double Scalar;
-    typedef Eigen::MatrixXd Matrix;
-    typedef Eigen::VectorXd Vector;
-    typedef Eigen::ArrayXd Array;
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
+    typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> Array;
     typedef Eigen::Map<const Matrix> MapMat;
     typedef Eigen::SelfAdjointEigenSolver<Matrix> EigenSolver;
     typedef Eigen::HouseholderQR<Matrix> QRdecomp;
     typedef Eigen::HouseholderSequence<Matrix, Vector> QRQ;
-    typedef std::pair<double, int> SortPair;
+    typedef std::pair<Scalar, int> SortPair;
 
-    const MapMat mat_A;  // A symmetric real matrix
+    MatOp<Scalar> *op;
     int dim_n;           // dimension of A
     int nev;             // number of eigenvalues requested
     int ncv;             // "m"
@@ -40,16 +41,17 @@ private:
         fac_f = fk;
 
         Vector v(dim_n);
-        double beta = 0.0;
-        for(int i = from_k; i < to_m; i++)
+        Scalar beta = 0.0;
+        for(int i = from_k; i <= to_m - 1; i++)
         {
             beta = fac_f.norm();
             v.noalias() = fac_f / beta;
-            fac_V.col(i) = v;
+            fac_V.col(i) = v; // The (i+1)-th column
             fac_H.block(i, 0, 1, i).setZero();
             fac_H(i, i - 1) = beta;
 
-            Vector w = mat_A * v;
+            Vector w(dim_n);
+            op->prod(v.data(), w.data());
             Vector h = fac_V.leftCols(i + 1).adjoint() * w;
             fac_f = w - fac_V.leftCols(i + 1) * h;
             fac_H.block(0, i, i + 1, 1) = h;
@@ -127,14 +129,30 @@ private:
     {
         Scalar prec = std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(2.0 / 3));
         Array bound = tol * ritz_val.head(nev).array().abs().max(prec);
-        Array resid = fac_f.norm() * ritz_vec.bottomRows<1>().array().abs();
+        Array resid =  ritz_vec.bottomRows(1).transpose().array().abs() * fac_f.norm();
         return (resid < bound).all();
     }
 
+    void init()
+    {
+        fac_V.setZero();
+        fac_H.setZero();
+        fac_f.setZero();
+
+        Vector v = Vector::Random(dim_n);
+        v.normalize();
+        Vector w(dim_n);
+        op->prod(v.data(), w.data());
+
+        fac_H(0, 0) = v.dot(w);
+        fac_f = w - v * fac_H(0, 0);
+        fac_V.col(0) = v;
+    }
+
 public:
-    SymEigsSolver(const Matrix &A_, int nev_, int ncv_) :
-        mat_A(A_.data(), A_.rows(), A_.cols()),
-        dim_n(A_.rows()),
+    SymEigsSolver(MatOp<Scalar> *op_, int nev_, int ncv_) :
+        op(op_),
+        dim_n(op->rows()),
         nev(nev_),
         ncv(ncv_),
         fac_step(1),
@@ -144,17 +162,7 @@ public:
         ritz_val(ncv),
         ritz_vec(ncv, nev)
     {
-        fac_V.setZero();
-        fac_H.setZero();
-        fac_f.setZero();
-
-        Vector v = Vector::Random(dim_n);
-        v.normalize();
-        Vector w = mat_A * v;
-
-        fac_H(0, 0) = v.dot(w);
-        fac_f = w - v * fac_H(0, 0);
-        fac_V.col(0) = v;
+        init();
     }
 
     int compute(int maxit = 1000, Scalar tol = 1e-10)
