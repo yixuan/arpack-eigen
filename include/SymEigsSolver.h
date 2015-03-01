@@ -101,6 +101,7 @@ private:
         retrieve_ritzpair();
     }
 
+    // Test convergence
     bool converged(Scalar tol)
     {
         // prec = epsilon^(2/3)
@@ -112,11 +113,6 @@ private:
         ritz_conv = (resid < bound);
 
         return ritz_conv.all();
-    }
-
-    static bool compare_eigenvalue(SortPair p1, SortPair p2)
-    {
-        return p1.first > p2.first;
     }
 
     // Retrieve and sort ritz values and ritz vectors
