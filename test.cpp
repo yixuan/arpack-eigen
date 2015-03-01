@@ -4,28 +4,46 @@
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-int main()
+template <int SelectionRule>
+void test(const MatrixXd &A, int k, int m)
 {
-    MatrixXd A = MatrixXd::Random(10, 10);
-    A = A.adjoint() * A;
+    MatrixXd mat;
+    if(SelectionRule == BOTH_ENDS)
+    {
+        mat = A.adjoint() + A;
+    } else {
+        mat = A.adjoint() * A;
+    }
 
-    int k = 2;
-    int m = 6;
+    Eigen::SelfAdjointEigenSolver<MatrixXd> eig(mat);
+    std::cout << "true eigenvalues = \n" << eig.eigenvalues().transpose() << "\n\n";
 
-    Eigen::SelfAdjointEigenSolver<MatrixXd> eig(A);
-    std::cout << "true eigenvalues = \n" << eig.eigenvalues() << "\n\n";
-
-    DenseMatOp<double> op(A);
-    SymEigsSolver<double> eigs(&op, k, m);
+    DenseMatOp<double> op(mat);
+    SymEigsSolver<double, SelectionRule> eigs(&op, k, m);
+    eigs.init();
     int niter = eigs.compute();
 
     VectorXd evals = eigs.eigenvalues();
     MatrixXd evecs = eigs.eigenvectors();
 
-    std::cout << "computed eigenvalues D = \n" << evals << "\n\n";
+    std::cout << "computed eigenvalues D = \n" << evals.transpose() << "\n\n";
     std::cout << "computed eigenvectors U = \n" << evecs << "\n\n";
-    std::cout << "AU - UD = \n" << A * evecs - evecs * evals.asDiagonal() << "\n\n";
+    std::cout << "AU - UD = \n" << mat * evecs - evecs * evals.asDiagonal() << "\n\n";
     std::cout << "niter = " << niter << std::endl;
+}
+
+int main()
+{
+    MatrixXd A = MatrixXd::Random(10, 10);
+
+    int k = 3;
+    int m = 6;
+
+    test<LARGEST_MAGN>(A, k, m);
+    test<LARGEST_ALGE>(A, k, m);
+    test<SMALLEST_MAGN>(A, k, m);
+    test<SMALLEST_ALGE>(A, k, m);
+    test<BOTH_ENDS>(A, k, m);
 
     return 0;
 }
