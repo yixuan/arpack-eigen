@@ -156,6 +156,28 @@ private:
         }
     }
 
+    // Sort the first nev Ritz pairs in decreasing magnitude order
+    // This is used to return the final results
+    void sort_ritzpair()
+    {
+        std::vector<SortPair> pairs(nev);
+        EigenvalueComparator<Scalar, LARGEST_MAGN> comp;
+        for(int i = 0; i < nev; i++)
+        {
+            pairs[i].first = ritz_val[i];
+            pairs[i].second = i;
+        }
+        std::sort(pairs.begin(), pairs.end(), comp);
+
+        Matrix new_ritz_vec(ncv, nev);
+
+        for(int i = 0; i < nev; i++)
+        {
+            ritz_val[i] = pairs[i].first;
+            new_ritz_vec.col(i) = ritz_vec.col(pairs[i].second);
+        }
+    }
+
 public:
     SymEigsSolver(MatOp<Scalar> *op_, int nev_, int ncv_) :
         op(op_),
@@ -210,6 +232,8 @@ public:
 
             restart(nev);
         }
+
+        sort_ritzpair();
 
         return i + 1;
     }
