@@ -172,6 +172,8 @@ private:
             ritz_val[i] = pairs[i].first;
             new_ritz_vec.col(i) = ritz_vec.col(pairs[i].second);
         }
+
+        ritz_vec.swap(new_ritz_vec);
     }
 
 public:
