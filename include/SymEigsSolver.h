@@ -14,7 +14,7 @@
 template <typename Scalar = double, int SelectionRule = LARGEST_MAGN>
 class SymEigsSolver
 {
-private:
+protected:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
     typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> Array;
@@ -40,6 +40,12 @@ private:
     Matrix ritz_vec;     // ritz vectors
     BoolArray ritz_conv; // indicator of the convergence of ritz values
 
+    // Matrix product in this case, and shift solve for SymEigsShiftSolver
+    virtual void matrix_operation(Scalar *x_in, Scalar *y_out)
+    {
+        op->prod(x_in, y_out);
+    }
+
     // Arnoldi factorization starting from step-k
     void factorize_from(int from_k, int to_m, const Vector &fk)
     {
@@ -58,7 +64,7 @@ private:
             fac_H(i, i - 1) = beta;
 
             Vector w(dim_n);
-            op->prod(v.data(), w.data());
+            matrix_operation(v.data(), w.data());
             Vector h = fac_V.leftCols(i + 1).adjoint() * w;
             fac_f = w - fac_V.leftCols(i + 1) * h;
             fac_H.block(0, i, i + 1, 1) = h;
@@ -154,7 +160,7 @@ private:
 
     // Sort the first nev Ritz pairs in decreasing magnitude order
     // This is used to return the final results
-    void sort_ritzpair()
+    virtual void sort_ritzpair()
     {
         std::vector<SortPair> pairs(nev);
         EigenvalueComparator<Scalar, LARGEST_MAGN> comp;
@@ -166,14 +172,17 @@ private:
         std::sort(pairs.begin(), pairs.end(), comp);
 
         Matrix new_ritz_vec(ncv, nev);
+        BoolArray new_ritz_conv(nev);
 
         for(int i = 0; i < nev; i++)
         {
             ritz_val[i] = pairs[i].first;
             new_ritz_vec.col(i) = ritz_vec.col(pairs[i].second);
+            new_ritz_conv[i] = ritz_conv[pairs[i].second];
         }
 
         ritz_vec.swap(new_ritz_vec);
+        ritz_conv.swap(new_ritz_conv);
     }
 
 public:
@@ -191,7 +200,7 @@ public:
     {}
 
     // Initialization and clean-up
-    void init(Scalar *init_coef)
+    virtual void init(Scalar *init_coef)
     {
         fac_V.setZero();
         fac_H.setZero();
@@ -201,17 +210,17 @@ public:
         ritz_conv.setZero();
 
         Vector v(dim_n);
-        op->prod(init_coef, v.data());
+        matrix_operation(init_coef, v.data());
         v.normalize();
         Vector w(dim_n);
-        op->prod(v.data(), w.data());
+        matrix_operation(v.data(), w.data());
 
         fac_H(0, 0) = v.dot(w);
         fac_f = w - v * fac_H(0, 0);
         fac_V.col(0) = v;
     }
     // Initialization with random initial coefficients
-    void init()
+    virtual void init()
     {
         Vector init_coef = Vector::Random(dim_n);
         init(init_coef.data());
@@ -279,6 +288,43 @@ public:
         }
 
         return fac_V * ritz_vec_conv;
+    }
+};
+
+
+
+
+
+template <typename Scalar = double, int SelectionRule = LARGEST_MAGN>
+class SymEigsShiftSolver: public SymEigsSolver<Scalar, SelectionRule>
+{
+private:
+    typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> Array;
+
+    Scalar sigma;
+    MatOpWithRealShiftSolve<Scalar> *op_shift;
+
+    // Shift solve in this case
+    virtual void matrix_operation(Scalar *x_in, Scalar *y_out)
+    {
+        op_shift->shift_solve(x_in, y_out);
+    }
+
+    // First transform back the ritz values, and then sort
+    virtual void sort_ritzpair()
+    {
+        Array ritz_val_org = Scalar(1.0) / this->ritz_val.head(this->nev).array() + sigma;
+        this->ritz_val.head(this->nev) = ritz_val_org;
+        SymEigsSolver<Scalar, SelectionRule>::sort_ritzpair();
+    }
+public:
+    SymEigsShiftSolver(MatOpWithRealShiftSolve<Scalar> *op_,
+                       int nev_, int ncv_, Scalar sigma_) :
+        SymEigsSolver<Scalar, SelectionRule>(op_, nev_, ncv_),
+        sigma(sigma_),
+        op_shift(op_)
+    {
+        op_shift->set_shift(sigma);
     }
 };
 
