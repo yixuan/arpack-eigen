@@ -54,7 +54,7 @@ public:
     virtual ~MatOpWithRealShiftSolve() {}
 
     // setting sigma
-    virtual void set_real_shift(Scalar sigma) {}
+    virtual void set_shift(Scalar sigma) {}
     // y_out = inv(A - sigma * I) * x_in
     virtual void shift_solve(Scalar *x_in, Scalar *y_out) = 0;
 };
@@ -62,40 +62,23 @@ public:
 template <typename Scalar>
 class MatOpWithComplexShiftSolve: public MatOpWithRealShiftSolve<Scalar>
 {
-protected:
-    bool sigma_is_real;
-    // shift solve for real sigma
-    virtual void real_shift_solve(Scalar *x_in, Scalar *y_out)
-    {
-        complex_shift_solve(x_in, y_out);
-    }
-    // shift solve for complex sigma
-    virtual void complex_shift_solve(Scalar *x_in, Scalar *y_out) = 0;
 public:
     // Constructor
     MatOpWithComplexShiftSolve(int m_, int n_) :
-        MatOpWithRealShiftSolve<Scalar>(m_, n_),
-        sigma_is_real(false)
+        MatOpWithRealShiftSolve<Scalar>(m_, n_)
     {}
     // Destructor
     virtual ~MatOpWithComplexShiftSolve() {}
 
     // setting real shift
-    virtual void set_real_shift(Scalar sigma)
+    virtual void set_shift(Scalar sigma)
     {
-        set_complex_shift(sigma, Scalar(0));
-        sigma_is_real = true;
+        this->set_shift(sigma, Scalar(0));
     }
     // setting complex shift
-    virtual void set_complex_shift(Scalar sigmar, Scalar sigmai) {}
+    virtual void set_shift(Scalar sigmar, Scalar sigmai) {}
     // y_out = inv(A - sigma * I) * x_in
-    virtual void shift_solve(Scalar *x_in, Scalar *y_out)
-    {
-        if(sigma_is_real)
-            real_shift_solve(x_in, y_out);
-        else
-            complex_shift_solve(x_in, y_out);
-    }
+    virtual void shift_solve(Scalar *x_in, Scalar *y_out) = 0;
 };
 
 
