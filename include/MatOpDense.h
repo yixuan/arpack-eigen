@@ -2,6 +2,8 @@
 #define MATOPDENSE_H
 
 #include <Eigen/Dense>
+#include <cmath>
+#include <limits>
 
 template <typename Scalar>
 class MatOpDense:
@@ -21,6 +23,8 @@ private:
 
     RealSolver rsolver;
     ComplexSolver csolver;
+
+    bool sigma_is_real;
 
     // shift solve for real sigma
     virtual void real_shift_solve(Scalar *x_in, Scalar *y_out)
@@ -43,7 +47,8 @@ public:
         MatOpWithComplexShiftSolve<Scalar>(mat_.rows(), mat_.cols()),
         mat(mat_.data(), mat_.rows(), mat_.cols()),
         vec_x(NULL, 1),
-        vec_y(NULL, 1)
+        vec_y(NULL, 1),
+        sigma_is_real(false)
     {}
 
     virtual ~MatOpDense() {}
@@ -66,16 +71,23 @@ public:
         vec_y.noalias() = mat.transpose() * vec_x;
     }
 
-    // setting real shift
-    virtual void set_real_shift(Scalar sigma)
+    // setting complex shift
+    virtual void set_shift(Scalar sigmar, Scalar sigmai)
     {
-        rsolver.compute(mat - sigma * Matrix::Identity(mat.rows(), mat.cols()));
+        if(std::abs(sigmai) < std::sqrt(std::numeric_limits<Scalar>::epsilon()))
+        {
+            rsolver.compute(mat - sigmar * Matrix::Identity(mat.rows(), mat.cols()));
+            sigma_is_real = true;
+        }
     }
 
-    // setting complex shift
-    virtual void set_complex_shift(Scalar sigmar, Scalar sigmai)
+    // y_out = inv(A - sigma * I) * x_in
+    virtual void shift_solve(Scalar *x_in, Scalar *y_out)
     {
-
+        if(sigma_is_real)
+            real_shift_solve(x_in, y_out);
+        else
+            complex_shift_solve(x_in, y_out);
     }
 };
 
