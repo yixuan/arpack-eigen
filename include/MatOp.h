@@ -1,12 +1,10 @@
 #ifndef MATOP_H
 #define MATOP_H
 
-#include <Eigen/Dense>
-
 template <typename Scalar>
 class MatOp
 {
-protected:
+private:
     // Dimension of the matrix
     // m rows and n columns
     // In eigenvalue problems, they are assumed to be equal,
@@ -30,7 +28,7 @@ public:
 };
 
 template <typename Scalar>
-class MatOpWithTransProd: public MatOp<Scalar>
+class MatOpWithTransProd: public virtual MatOp<Scalar>
 {
 public:
     // Constructor
@@ -45,78 +43,60 @@ public:
 };
 
 template <typename Scalar>
-class MatOpWithShiftSolve: public MatOpWithTransProd<Scalar>
+class MatOpWithRealShiftSolve: public virtual MatOp<Scalar>
 {
 public:
     // Constructor
-    MatOpWithShiftSolve(int m_, int n_) :
-        MatOpWithTransProd<Scalar>(m_, n_)
+    MatOpWithRealShiftSolve(int m_, int n_) :
+        MatOp<Scalar>(m_, n_)
     {}
     // Destructor
-    virtual ~MatOpWithShiftSolve() {}
+    virtual ~MatOpWithRealShiftSolve() {}
 
-    // y_out = A' * x_in
-    virtual void trans_prod(Scalar *x_in, Scalar *y_out) {}
-    // setting sigmar and sigmai
-    virtual void set_shift(Scalar sigmar, Scalar sigmai) {}
+    // setting sigma
+    virtual void set_real_shift(Scalar sigma) {}
     // y_out = inv(A - sigma * I) * x_in
     virtual void shift_solve(Scalar *x_in, Scalar *y_out) = 0;
 };
 
-
-
 template <typename Scalar>
-class DenseMatOp: public MatOpWithShiftSolve<Scalar>
+class MatOpWithComplexShiftSolve: public MatOpWithRealShiftSolve<Scalar>
 {
-private:
-    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
-    typedef Eigen::Map<const Matrix> MapMat;
-    typedef Eigen::Map< Eigen::Matrix<Scalar, Eigen::Dynamic, 1> > MapVec;
-
-    MapMat mat;
-    MapVec vec_x;
-    MapVec vec_y;
+protected:
+    bool sigma_is_real;
+    // shift solve for real sigma
+    virtual void real_shift_solve(Scalar *x_in, Scalar *y_out)
+    {
+        complex_shift_solve(x_in, y_out);
+    }
+    // shift solve for complex sigma
+    virtual void complex_shift_solve(Scalar *x_in, Scalar *y_out) = 0;
 public:
-    DenseMatOp(const Matrix &mat_) :
-        MatOpWithShiftSolve<Scalar>(mat_.rows(), mat_.cols()),
-        mat(mat_.data(), mat_.rows(), mat_.cols()),
-        vec_x(NULL, 1),
-        vec_y(NULL, 1)
+    // Constructor
+    MatOpWithComplexShiftSolve(int m_, int n_) :
+        MatOpWithRealShiftSolve<Scalar>(m_, n_),
+        sigma_is_real(false)
     {}
+    // Destructor
+    virtual ~MatOpWithComplexShiftSolve() {}
 
-    virtual ~DenseMatOp() {}
-
-    // y_out = A * x_in
-    virtual void prod(Scalar *x_in, Scalar *y_out)
+    // setting real shift
+    virtual void set_real_shift(Scalar sigma)
     {
-        new (&vec_x) MapVec(x_in, MatOp<Scalar>::n);
-        new (&vec_y) MapVec(y_out, MatOp<Scalar>::m);
-
-        vec_y.noalias() = mat * vec_x;
+        set_complex_shift(sigma, Scalar(0));
+        sigma_is_real = true;
     }
-
-    // y_out = A' * x_in
-    virtual void trans_prod(Scalar *x_in, Scalar *y_out)
-    {
-        new (&vec_x) MapVec(x_in, MatOp<Scalar>::m);
-        new (&vec_y) MapVec(y_out, MatOp<Scalar>::n);
-
-        vec_y.noalias() = mat.transpose() * vec_x;
-    }
-
-    // setting sigmar and sigmai
-    virtual void set_shift(Scalar sigmar, Scalar sigmai)
-    {
-
-    }
+    // setting complex shift
+    virtual void set_complex_shift(Scalar sigmar, Scalar sigmai) {}
     // y_out = inv(A - sigma * I) * x_in
     virtual void shift_solve(Scalar *x_in, Scalar *y_out)
     {
-
+        if(sigma_is_real)
+            real_shift_solve(x_in, y_out);
+        else
+            complex_shift_solve(x_in, y_out);
     }
 };
-
-
 
 
 #endif // MATOP_H
