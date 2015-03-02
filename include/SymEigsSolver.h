@@ -40,6 +40,11 @@ protected:
     Matrix ritz_vec;     // ritz vectors
     BoolArray ritz_conv; // indicator of the convergence of ritz values
 
+    const Scalar prec;   // precision parameter used to test convergence
+                         // prec = epsilon^(2/3)
+                         // epsilon is the machine precision,
+                         // e.g. ~= 1e-16 for the "double" type
+
     // Matrix product in this case, and shift solve for SymEigsShiftSolver
     virtual void matrix_operation(Scalar *x_in, Scalar *y_out)
     {
@@ -69,13 +74,6 @@ protected:
             fac_f = w - fac_V.leftCols(i + 1) * h;
             fac_H.block(0, i, i + 1, 1) = h;
         }
-    }
-
-    // The step-m Arnoldi factorization
-    void factorize()
-    {
-        factorize_from(1, ncv, fac_f);
-        retrieve_ritzpair();
     }
 
     // Implicitly restarted Arnoldi factorization
@@ -110,9 +108,6 @@ protected:
     // Test convergence
     bool converged(Scalar tol)
     {
-        // prec = epsilon^(2/3)
-        // epsilon is the machine precision, e.g. ~= 1e-16 for the "double" type
-        Scalar prec = std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(2.0 / 3));
         // bound = tol * max(prec, abs(theta)), theta for ritz value
         Array bound = tol * ritz_val.head(nev).array().abs().max(prec);
         Array resid =  ritz_vec.bottomRows(1).transpose().array().abs() * fac_f.norm();
@@ -196,7 +191,8 @@ public:
         fac_f(dim_n),
         ritz_val(ncv),
         ritz_vec(ncv, nev),
-        ritz_conv(nev)
+        ritz_conv(nev),
+        prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(2.0 / 3)))
     {}
 
     // Initialization and clean-up
@@ -226,11 +222,13 @@ public:
         init(init_coef.data());
     }
 
-    // Compute eigenvalues and return the number of iteration
+    // Compute Ritz pairs and return the number of iteration
     int compute(int maxit = 1000, Scalar tol = 1e-10)
     {
-        factorize();
-
+        // The m-step Arnoldi factorization
+        factorize_from(1, ncv, fac_f);
+        retrieve_ritzpair();
+        // Restarting
         int i = 0;
         for(i = 0; i < maxit; i++)
         {
@@ -239,7 +237,7 @@ public:
 
             restart(nev);
         }
-
+        // Sorting results
         sort_ritzpair();
 
         return i + 1;
