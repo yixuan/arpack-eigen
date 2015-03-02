@@ -65,11 +65,11 @@ public:
 
 // Specialization for LARGEST_REAL
 // This covers [complex] x [LARGEST_REAL]
-template <>
-class EigenvalueComparator<std::complex<double>, LARGEST_REAL>
+template <typename RealType>
+class EigenvalueComparator<std::complex<RealType>, LARGEST_REAL>
 {
 public:
-    typedef std::pair<std::complex<double>, int> SortPair;
+    typedef std::pair<std::complex<RealType>, int> SortPair;
 
     bool operator() (SortPair v1, SortPair v2)
     {
@@ -79,11 +79,11 @@ public:
 
 // Specialization for LARGEST_IMAG
 // This covers [complex] x [LARGEST_IMAG]
-template <>
-class EigenvalueComparator<std::complex<double>, LARGEST_IMAG>
+template <typename RealType>
+class EigenvalueComparator<std::complex<RealType>, LARGEST_IMAG>
 {
 public:
-    typedef std::pair<std::complex<double>, int> SortPair;
+    typedef std::pair<std::complex<RealType>, int> SortPair;
 
     bool operator() (SortPair v1, SortPair v2)
     {
@@ -107,11 +107,11 @@ public:
 
 // Specialization for SMALLEST_REAL
 // This covers [complex] x [SMALLEST_REAL]
-template <>
-class EigenvalueComparator<std::complex<double>, SMALLEST_REAL>
+template <typename RealType>
+class EigenvalueComparator<std::complex<RealType>, SMALLEST_REAL>
 {
 public:
-    typedef std::pair<std::complex<double>, int> SortPair;
+    typedef std::pair<std::complex<RealType>, int> SortPair;
 
     bool operator() (SortPair v1, SortPair v2)
     {
@@ -121,11 +121,11 @@ public:
 
 // Specialization for SMALLEST_IMAG
 // This covers [complex] x [SMALLEST_IMAG]
-template <>
-class EigenvalueComparator<std::complex<double>, SMALLEST_IMAG>
+template <typename RealType>
+class EigenvalueComparator<std::complex<RealType>, SMALLEST_IMAG>
 {
 public:
-    typedef std::pair<std::complex<double>, int> SortPair;
+    typedef std::pair<std::complex<RealType>, int> SortPair;
 
     bool operator() (SortPair v1, SortPair v2)
     {
