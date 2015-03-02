@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <cmath>
+#include <complex>
 #include <limits>
 
 template <typename Scalar>
@@ -14,12 +15,15 @@ private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
     typedef Eigen::Map<const Matrix> MapMat;
     typedef Eigen::Map< Eigen::Matrix<Scalar, Eigen::Dynamic, 1> > MapVec;
+    typedef Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, Eigen::Dynamic> ComplexMatrix;
+    typedef Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, 1> ComplexVector;
     typedef Eigen::PartialPivLU<Matrix> RealSolver;
     typedef Eigen::PartialPivLU<Eigen::MatrixXcd> ComplexSolver;
 
     MapMat mat;
     MapVec vec_x;
     MapVec vec_y;
+    ComplexVector vec_cx;
 
     RealSolver rsolver;
     ComplexSolver csolver;
@@ -38,7 +42,10 @@ private:
     // shift solve for complex sigma
     virtual void complex_shift_solve(Scalar *x_in, Scalar *y_out)
     {
+        vec_cx.real() = MapVec(x_in, mat.cols());
+        new (&vec_y) MapVec(y_out, mat.rows());
 
+        vec_y.noalias() = csolver.solve(vec_cx).real();
     }
 public:
     MatOpDense(const Matrix &mat_) :
@@ -78,6 +85,13 @@ public:
         {
             rsolver.compute(mat - sigmar * Matrix::Identity(mat.rows(), mat.cols()));
             sigma_is_real = true;
+        } else {
+            ComplexMatrix cmat = mat.template cast< std::complex<Scalar> >();
+            cmat.diagonal().array() -= std::complex<Scalar>(sigmar, sigmai);
+            csolver.compute(cmat);
+            sigma_is_real = false;
+            vec_cx.resize(mat.cols());
+            vec_cx.setZero();
         }
     }
 
