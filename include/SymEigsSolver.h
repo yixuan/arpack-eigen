@@ -285,7 +285,9 @@ public:
             }
         }
 
-        return fac_V * ritz_vec_conv;
+        res.noalias() = fac_V * ritz_vec_conv;
+
+        return res;
     }
 };
 
