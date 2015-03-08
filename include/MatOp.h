@@ -65,6 +65,7 @@ class MatOpWithComplexShiftSolve: public MatOpWithRealShiftSolve<Scalar>
 public:
     // Constructor
     MatOpWithComplexShiftSolve(int m_, int n_) :
+        MatOp<Scalar>(m_, n_),
         MatOpWithRealShiftSolve<Scalar>(m_, n_)
     {}
     // Destructor
