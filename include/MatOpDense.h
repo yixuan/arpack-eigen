@@ -20,7 +20,7 @@ private:
     typedef Eigen::PartialPivLU<Matrix> RealSolver;
     typedef Eigen::PartialPivLU<Eigen::MatrixXcd> ComplexSolver;
 
-    MapMat mat;
+    const MapMat mat;
     MapVec vec_x;
     MapVec vec_y;
     ComplexVector vec_cx;
