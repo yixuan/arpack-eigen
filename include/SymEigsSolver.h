@@ -14,7 +14,7 @@
 template <typename Scalar = double, int SelectionRule = LARGEST_MAGN>
 class SymEigsSolver
 {
-protected:
+private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
     typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> Array;
@@ -52,7 +52,7 @@ protected:
     }
 
     // Arnoldi factorization starting from step-k
-    void factorize_from(int from_k, int to_m, const Vector &fk)
+    virtual void factorize_from(int from_k, int to_m, const Vector &fk)
     {
         if(to_m <= from_k) return;
 
@@ -77,7 +77,7 @@ protected:
     }
 
     // Implicitly restarted Arnoldi factorization
-    void restart(int k)
+    virtual void restart(int k)
     {
         if(k >= ncv)
             return;
@@ -106,18 +106,18 @@ protected:
     }
 
     // Test convergence
-    bool converged(Scalar tol)
+    virtual bool converged(Scalar tol)
     {
         // bound = tol * max(prec, abs(theta)), theta for ritz value
         Array bound = tol * ritz_val.head(nev).array().abs().max(prec);
-        Array resid =  ritz_vec.bottomRows(1).transpose().array().abs() * fac_f.norm();
+        Array resid =  ritz_vec.template bottomRows<1>().transpose().array().abs() * fac_f.norm();
         ritz_conv = (resid < bound);
 
         return ritz_conv.all();
     }
 
     // Retrieve and sort ritz values and ritz vectors
-    void retrieve_ritzpair()
+    virtual void retrieve_ritzpair()
     {
         EigenSolver eig(fac_H);
         Vector evals = eig.eigenvalues();
@@ -223,7 +223,7 @@ public:
     }
 
     // Compute Ritz pairs and return the number of iteration
-    int compute(int maxit = 1000, Scalar tol = 1e-10)
+    virtual int compute(int maxit = 1000, Scalar tol = 1e-10)
     {
         // The m-step Arnoldi factorization
         factorize_from(1, ncv, fac_f);
@@ -244,7 +244,7 @@ public:
     }
 
     // Return converged eigenvalues
-    Vector eigenvalues()
+    virtual Vector eigenvalues()
     {
         int nconv = ritz_conv.cast<int>().sum();
         Vector res(nconv);
@@ -266,7 +266,7 @@ public:
     }
 
     // Return converged eigenvectors
-    Matrix eigenvectors()
+    virtual Matrix eigenvectors()
     {
         int nconv = ritz_conv.cast<int>().sum();
         Matrix res(dim_n, nconv);
