@@ -58,21 +58,37 @@ private:
 
         fac_f = fk;
 
-        Vector v(dim_n);
-        Scalar beta = 0.0;
+        Vector v(dim_n), w(dim_n);
+        Scalar beta = 0.0, Hii = 0.0;
+        // Keep the upperleft k x k submatrix of H and set other elements to 0
+        fac_H.rightCols(ncv - from_k).setZero();
+        fac_H.block(from_k, 0, ncv - from_k, from_k).setZero();
         for(int i = from_k; i <= to_m - 1; i++)
         {
             beta = fac_f.norm();
             v.noalias() = fac_f / beta;
             fac_V.col(i) = v; // The (i+1)-th column
-            fac_H.block(i, 0, 1, i).setZero();
             fac_H(i, i - 1) = beta;
 
-            Vector w(dim_n);
             matrix_operation(v.data(), w.data());
-            Vector h = fac_V.leftCols(i + 1).adjoint() * w;
-            fac_f = w - fac_V.leftCols(i + 1) * h;
-            fac_H.block(0, i, i + 1, 1) = h;
+
+            Hii = v.dot(w);
+            fac_H(i - 1, i) = beta;
+            fac_H(i, i) = Hii;
+
+            fac_f.noalias() = w - beta * fac_V.col(i - 1) - Hii * v;
+            // Correct f if it is not orthogonal to V
+            // Typically the largest absolute value occurs in
+            // the first element, i.e., <v1, f>, so we use this
+            // to test the orthogonality
+            Scalar v1f = fac_f.dot(fac_V.col(0));
+            if(v1f > prec || v1f < -prec)
+            {
+                Vector Vf(i + 1);
+                Vf.tail(i) = fac_V.block(0, 1, dim_n, i).transpose() * fac_f;
+                Vf[0] = v1f;
+                fac_f -= fac_V.leftCols(i + 1) * Vf;
+            }
         }
     }
 
