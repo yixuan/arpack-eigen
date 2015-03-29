@@ -9,6 +9,7 @@
 
 #include "MatOp.h"
 #include "SelectionRule.h"
+#include "UpperHessenbergQR.h"
 
 
 template <typename Scalar = double, int SelectionRule = LARGEST_MAGN>
@@ -22,8 +23,6 @@ private:
     typedef Eigen::Map<const Matrix> MapMat;
     typedef Eigen::Map<const Vector> MapVec;
     typedef Eigen::SelfAdjointEigenSolver<Matrix> EigenSolver;
-    typedef Eigen::HouseholderQR<Matrix> QRdecomp;
-    typedef Eigen::HouseholderSequence<Matrix, Vector> QRQ;
     typedef std::pair<Scalar, int> SortPair;
 
     MatOp<Scalar> *op;   // object to conduct matrix operation,
@@ -98,22 +97,22 @@ private:
         if(k >= ncv)
             return;
 
-        QRdecomp qr;
+        TridiagQR<Scalar> decomp;
         Vector em(ncv);
         em.setZero();
         em[ncv - 1] = 1;
 
         for(int i = k; i < ncv; i++)
         {
-            qr.compute(fac_H - ritz_val[i] * Matrix::Identity(ncv, ncv));
-            QRQ Q = qr.householderQ();
+            decomp.compute(fac_H - ritz_val[i] * Matrix::Identity(ncv, ncv));
+
             // V -> VQ
-            fac_V.applyOnTheRight(Q);
+            decomp.applyYQ(fac_V);
             // H -> Q'HQ
-            fac_H.applyOnTheRight(Q);
-            fac_H.applyOnTheLeft(Q.adjoint());
+            decomp.applyYQ(fac_H);
+            decomp.applyQtY(fac_H);
             // em -> Q'em
-            em.applyOnTheLeft(Q.adjoint());
+            decomp.applyQtY(em);
         }
 
         Vector fk = fac_f * em[k - 1];
