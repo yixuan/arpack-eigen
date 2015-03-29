@@ -201,7 +201,7 @@ public:
     {}
 
     TridiagQR(const Matrix &mat) :
-        UpperHessenbergQR<Scalar>(mat.n_rows)
+        UpperHessenbergQR<Scalar>(mat.rows())
     {
         this->compute(mat);
     }
