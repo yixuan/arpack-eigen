@@ -19,7 +19,7 @@ void QR_UpperHessenberg()
     // Obtain Q matrix
     MatrixXd I = MatrixXd::Identity(n, n);
     MatrixXd Q = I;
-    decomp.applyQY(Q);
+    decomp.apply_QY(Q);
 
     // Test orthogonality
     MatrixXd QtQ = Q.transpose() * Q;
@@ -30,7 +30,7 @@ void QR_UpperHessenberg()
 
     // Calculate R = Q'H
     MatrixXd R = H;
-    decomp.applyQtY(R);
+    decomp.apply_QtY(R);
     MatrixXd Rlower = R.triangularView<Eigen::Lower>();
     Rlower.diagonal().setZero();
     std::cout << "whether R is upper triangular, error = "
@@ -43,19 +43,19 @@ void QR_UpperHessenberg()
     MatrixXd Y = MatrixXd::Random(n, n);
 
     MatrixXd QY = Y;
-    decomp.applyQY(QY);
+    decomp.apply_QY(QY);
     std::cout << "max error of QY = " << (QY - Q * Y).cwiseAbs().maxCoeff() << std::endl;
 
     MatrixXd YQ = Y;
-    decomp.applyYQ(YQ);
+    decomp.apply_YQ(YQ);
     std::cout << "max error of YQ = " << (YQ - Y * Q).cwiseAbs().maxCoeff() << std::endl;
 
     MatrixXd QtY = Y;
-    decomp.applyQtY(QtY);
+    decomp.apply_QtY(QtY);
     std::cout << "max error of Q'Y = " << (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() << std::endl;
 
     MatrixXd YQt = Y;
-    decomp.applyYQt(YQt);
+    decomp.apply_YQt(YQt);
     std::cout << "max error of YQ' = " << (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() << std::endl;
 }
 
@@ -75,7 +75,7 @@ void QR_Tridiagonal()
     // Obtain Q matrix
     MatrixXd I = MatrixXd::Identity(n, n);
     MatrixXd Q = I;
-    decomp.applyQY(Q);
+    decomp.apply_QY(Q);
 
     // Test orthogonality
     MatrixXd QtQ = Q.transpose() * Q;
@@ -85,8 +85,7 @@ void QR_Tridiagonal()
     std::cout << "||QQ' - I||_inf = " << (QQt - I).cwiseAbs().maxCoeff() << std::endl;
 
     // Calculate R = Q'H
-    MatrixXd R = H;
-    decomp.applyQtY(R);
+    MatrixXd R = decomp.matrix_R();
     MatrixXd Rlower = R.triangularView<Eigen::Lower>();
     Rlower.diagonal().setZero();
     std::cout << "whether R is upper triangular, error = "
@@ -99,19 +98,19 @@ void QR_Tridiagonal()
     MatrixXd Y = MatrixXd::Random(n, n);
 
     MatrixXd QY = Y;
-    decomp.applyQY(QY);
+    decomp.apply_QY(QY);
     std::cout << "max error of QY = " << (QY - Q * Y).cwiseAbs().maxCoeff() << std::endl;
 
     MatrixXd YQ = Y;
-    decomp.applyYQ(YQ);
+    decomp.apply_YQ(YQ);
     std::cout << "max error of YQ = " << (YQ - Y * Q).cwiseAbs().maxCoeff() << std::endl;
 
     MatrixXd QtY = Y;
-    decomp.applyQtY(QtY);
+    decomp.apply_QtY(QtY);
     std::cout << "max error of Q'Y = " << (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() << std::endl;
 
     MatrixXd YQt = Y;
-    decomp.applyYQt(YQt);
+    decomp.apply_YQt(YQt);
     std::cout << "max error of YQ' = " << (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() << std::endl;
 }
 
