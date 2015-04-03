@@ -5,8 +5,8 @@
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-int run_F77(MatrixXd &M, int k, int m);
-int run_Cpp(MatrixXd &M, int k, int m);
+int run_F77(MatrixXd &M, VectorXd &init_resid, int k, int m);
+int run_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m);
 
 int main()
 {
@@ -15,13 +15,16 @@ int main()
     A.array() -= 0.5;
     MatrixXd M = A.transpose() * A;
 
+    VectorXd init_resid = VectorXd::Random(M.cols());
+    init_resid.array() -= 0.5;
+
     int k = 10;
     int m = 20;
 
     clock_t t1, t2;
     t1 = clock();
 
-    run_F77(M, k, m);
+    run_F77(M, init_resid, k, m);
 
     t2 = clock();
     std::cout << "elapsed time for F77 version: "
@@ -29,7 +32,7 @@ int main()
 
     t1 = clock();
 
-    run_Cpp(M, k, m);
+    run_Cpp(M, init_resid, k, m);
 
     t2 = clock();
     std::cout << "elapsed time for C++ version: "

@@ -6,7 +6,7 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 typedef Eigen::Map<VectorXd> MapVec;
 
-int run_F77(MatrixXd &M, int k, int m)
+int run_F77(MatrixXd &M, VectorXd &init_resid, int k, int m)
 {
     // Begin ARPACK
     //
@@ -25,6 +25,7 @@ int run_F77(MatrixXd &M, int k, int m)
     double tol = 1e-10;
     // Residual vector
     double *resid = new double[n]();
+    std::copy(init_resid.data(), init_resid.data() + n, resid);
     // Number of Ritz values used
     int ncv = m;
     // Vector of eigenvalues
@@ -53,7 +54,7 @@ int run_F77(MatrixXd &M, int k, int m)
     double *workl = new double[lworkl]();
     // Error flag. 0 means random initialization,
     // otherwise using resid as initial value
-    int info = 0;
+    int info = 1;
 
     saupd(ido, bmat, n, which,
           nev, tol, resid,
