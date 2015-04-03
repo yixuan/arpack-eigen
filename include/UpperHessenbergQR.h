@@ -11,6 +11,7 @@ private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
     typedef Eigen::Matrix<Scalar, 2, 2> Matrix22;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
+    typedef Eigen::Matrix<Scalar, 1, Eigen::Dynamic> RowVector;
     typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> Array;
 
 protected:
@@ -143,16 +144,19 @@ public:
         if(!computed)
             return;
 
-        Matrix22 Gi;
+        Scalar *c = rot_cos.data() + n - 2,
+               *s = rot_sin.data() + n - 2;
+        RowVector Yi(Y.cols());
         for(int i = n - 2; i >= 0; i--)
         {
             // Y[i:(i + 1), ] = Gi * Y[i:(i + 1), ]
             // Gi = [ cos[i]  sin[i]]
             //      [-sin[i]  cos[i]]
-            Gi << rot_cos[i], rot_sin[i],
-                 -rot_sin[i], rot_cos[i];
-
-            Y.block(i, 0, 2, Y.cols()) = Gi * Y.block(i, 0, 2, Y.cols());
+            Yi = Y.row(i);
+            Y.row(i)     =  (*c) * Yi + (*s) * Y.row(i + 1);
+            Y.row(i + 1) = -(*s) * Yi + (*c) * Y.row(i + 1);
+            c--;
+            s--;
         }
     }
 
@@ -162,16 +166,19 @@ public:
         if(!computed)
             return;
 
-        Matrix22 Git;
+        Scalar *c = rot_cos.data(),
+               *s = rot_sin.data();
+        RowVector Yi(Y.cols());
         for(int i = 0; i < n - 1; i++)
         {
             // Y[i:(i + 1), ] = Gi' * Y[i:(i + 1), ]
             // Gi = [ cos[i]  sin[i]]
             //      [-sin[i]  cos[i]]
-            Git << rot_cos[i], -rot_sin[i],
-                   rot_sin[i],  rot_cos[i];
-
-            Y.block(i, 0, 2, Y.cols()) = Git * Y.block(i, 0, 2, Y.cols());
+            Yi = Y.row(i);
+            Y.row(i)     = (*c) * Yi - (*s) * Y.row(i + 1);
+            Y.row(i + 1) = (*s) * Yi + (*c) * Y.row(i + 1);
+            c++;
+            s++;
         }
     }
 
@@ -181,16 +188,19 @@ public:
         if(!computed)
             return;
 
-        Matrix22 Gi;
+        Scalar *c = rot_cos.data(),
+               *s = rot_sin.data();
+        Vector Yi(Y.rows());
         for(int i = 0; i < n - 1; i++)
         {
             // Y[, i:(i + 1)] = Y[, i:(i + 1)] * Gi
             // Gi = [ cos[i]  sin[i]]
             //      [-sin[i]  cos[i]]
-            Gi << rot_cos[i], rot_sin[i],
-                 -rot_sin[i], rot_cos[i];
-
-            Y.block(0, i, Y.rows(), 2) = Y.block(0, i, Y.rows(), 2) * Gi;
+            Yi = Y.col(i);
+            Y.col(i)     = (*c) * Yi - (*s) * Y.col(i + 1);
+            Y.col(i + 1) = (*s) * Yi + (*c) * Y.col(i + 1);
+            c++;
+            s++;
         }
     }
 
@@ -200,16 +210,19 @@ public:
         if(!computed)
             return;
 
-        Matrix22 Git;
+        Scalar *c = rot_cos.data() + n - 2,
+               *s = rot_sin.data() + n - 2;
+        Vector Yi(Y.rows());
         for(int i = n - 2; i >= 0; i--)
         {
             // Y[, i:(i + 1)] = Y[, i:(i + 1)] * Gi'
             // Gi = [ cos[i]  sin[i]]
             //      [-sin[i]  cos[i]]
-            Git << rot_cos[i], -rot_sin[i],
-                   rot_sin[i],  rot_cos[i];
-
-            Y.block(0, i, Y.rows(), 2) = Y.block(0, i, Y.rows(), 2) * Git;
+            Yi = Y.col(i);
+            Y.col(i)     =  (*c) * Yi + (*s) * Y.col(i + 1);
+            Y.col(i + 1) = -(*s) * Yi + (*c) * Y.col(i + 1);
+            c--;
+            s--;
         }
     }
 };
