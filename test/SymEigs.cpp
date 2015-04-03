@@ -18,12 +18,14 @@ void test(const MatrixXd &A, int k, int m)
     }
 
     Eigen::SelfAdjointEigenSolver<MatrixXd> eig(mat);
-    std::cout << "true eigenvalues = \n" << eig.eigenvalues().transpose() << "\n";
+    std::cout << "all eigenvalues = \n" << eig.eigenvalues().transpose() << "\n";
 
     MatOpDense<double> op(mat);
     SymEigsSolver<double, SelectionRule> eigs(&op, k, m);
     eigs.init();
     int niter = eigs.compute();
+    int nops;
+    eigs.info(nops);
 
     VectorXd evals = eigs.eigenvalues();
     MatrixXd evecs = eigs.eigenvectors();
@@ -32,6 +34,7 @@ void test(const MatrixXd &A, int k, int m)
     //std::cout << "computed eigenvectors U = \n" << evecs << "\n\n";
     std::cout << "||AU - UD||_inf = " << (mat * evecs - evecs * evals.asDiagonal()).array().abs().maxCoeff() << "\n";
     std::cout << "niter = " << niter << "\n";
+    std::cout << "nops = " << nops << "\n";
 }
 
 int main()

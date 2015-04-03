@@ -27,10 +27,15 @@ private:
 
     MatOp<Scalar> *op;   // object to conduct matrix operation,
                          // e.g. matrix-vector product
-    int dim_n;           // dimension of matrix A
-    int nev;             // number of eigenvalues requested
-    int ncv;             // number of ritz values
+    const int dim_n;     // dimension of matrix A
+    const int nev;       // number of eigenvalues requested
+    int nev_updated;     // increase nev in factorizatio if needed
+    const int ncv;       // number of ritz values
 
+protected:
+    int nmatop;          // number of matrix operations called
+
+private:
     Matrix fac_V;        // V matrix in the Arnoldi factorization
     Matrix fac_H;        // H matrix in the Arnoldi factorization
     Vector fac_f;        // residual in the Arnoldi factorization
@@ -48,6 +53,7 @@ private:
     virtual void matrix_operation(Scalar *x_in, Scalar *y_out)
     {
         op->prod(x_in, y_out);
+        nmatop++;
     }
 
     // Arnoldi factorization starting from step-k
@@ -104,18 +110,23 @@ private:
 
         for(int i = k; i < ncv; i++)
         {
-            decomp.compute(fac_H - ritz_val[i] * Matrix::Identity(ncv, ncv));
+            // QR decomposition of H-mu*I, mu is the shift
+            fac_H.diagonal() = fac_H.diagonal().array() - ritz_val[i];
+            decomp.compute(fac_H);
 
             // V -> VQ
-            decomp.applyYQ(fac_V);
+            decomp.apply_YQ(fac_V);
             // H -> Q'HQ
-            decomp.applyYQ(fac_H);
-            decomp.applyQtY(fac_H);
+            // Since QR = H - mu * I, we have H = QR + mu * I
+            // and therefore Q'HQ = RQ + mu * I
+            fac_H = decomp.matrix_R();
+            decomp.apply_YQ(fac_H);
+            fac_H.diagonal() = fac_H.diagonal().array() + ritz_val[i];
             // em -> Q'em
-            decomp.applyQtY(em);
+            decomp.apply_QtY(em);
         }
 
-        Vector fk = fac_f * em[k - 1];
+        Vector fk = fac_f * em[k - 1] + fac_V.col(k) * fac_H(k, k - 1);
         factorize_from(k, ncv, fk);
         retrieve_ritzpair();
     }
@@ -123,12 +134,21 @@ private:
     // Test convergence
     virtual bool converged(Scalar tol)
     {
-        // bound = tol * max(prec, abs(theta)), theta for ritz value
-        Array bound = tol * ritz_val.head(nev).array().abs().max(prec);
+        // thresh = tol * max(prec, abs(theta)), theta for ritz value
+        Array thresh = tol * ritz_val.head(nev).array().abs().max(prec);
         Array resid =  ritz_vec.template bottomRows<1>().transpose().array().abs() * fac_f.norm();
-        ritz_conv = (resid < bound);
+        ritz_conv = (resid < thresh);
 
-        return ritz_conv.all();
+        // Converged "wanted" ritz values
+        int nconv = ritz_conv.cast<int>().sum();
+        // Adjust nev_updated, according to dsaup2.f line 691~700 in ARPACK
+        nev_updated = nev + std::min(nconv, (ncv - nev) / 2);
+        if(nev == 1 && ncv >= 6)
+            nev_updated = ncv / 2;
+        else if(nev == 1 && ncv > 2)
+            nev_updated = 2;
+
+        return nconv >= nev;
     }
 
     // Retrieve and sort ritz values and ritz vectors
@@ -149,15 +169,26 @@ private:
         // For BOTH_ENDS, the eigenvalues are sorted according
         // to the LARGEST_ALGE rule, so we need to move those smallest
         // values to the left
+        // The order would be
+        // Largest => Smallest => 2nd largest => 2nd smallest => ...
+        // We keep this order since the first k values will always be
+        // the wanted collection, no matter k is nev_updated (used in restart())
+        // or is nev (used in sort_ritzpair())
         if(SelectionRule == BOTH_ENDS)
         {
-            int offset = (nev + 1) / 2;
-            for(int i = 0; i < nev - offset; i++)
+            std::vector<SortPair> pairs_copy(pairs);
+            for(int i = 0; i < ncv; i++)
             {
-                std::swap(pairs[offset + i], pairs[ncv - 1 - i]);
+                // If i is even, pick values from the left (large values)
+                // If i is odd, pick values from the right (small values)
+                if(i % 2 == 0)
+                    pairs[i] = pairs_copy[i / 2];
+                else
+                    pairs[i] = pairs_copy[ncv - 1 - i / 2];
             }
         }
 
+        // Copy the ritz values and vectors to ritz_val and ritz_vec, respectively
         for(int i = 0; i < ncv; i++)
         {
             ritz_val[i] = pairs[i].first;
@@ -200,7 +231,9 @@ public:
         op(op_),
         dim_n(op->rows()),
         nev(nev_),
+        nev_updated(nev_),
         ncv(ncv_),
+        nmatop(0),
         fac_V(dim_n, ncv),
         fac_H(ncv, ncv),
         fac_f(dim_n),
@@ -211,7 +244,7 @@ public:
     {}
 
     // Initialization and clean-up
-    virtual void init(Scalar *init_coef)
+    virtual void init(Scalar *init_resid)
     {
         fac_V.setZero();
         fac_H.setZero();
@@ -220,8 +253,10 @@ public:
         ritz_vec.setZero();
         ritz_conv.setZero();
 
+        nmatop = 0;
+
         Vector v(dim_n);
-        matrix_operation(init_coef, v.data());
+        std::copy(init_resid, init_resid + dim_n, v.data());
         v.normalize();
         Vector w(dim_n);
         matrix_operation(v.data(), w.data());
@@ -233,8 +268,9 @@ public:
     // Initialization with random initial coefficients
     virtual void init()
     {
-        Vector init_coef = Vector::Random(dim_n);
-        init(init_coef.data());
+        Vector init_resid = Vector::Random(dim_n);
+        init_resid.array() -= 0.5;
+        init(init_resid.data());
     }
 
     // Compute Ritz pairs and return the number of iteration
@@ -244,18 +280,23 @@ public:
         factorize_from(1, ncv, fac_f);
         retrieve_ritzpair();
         // Restarting
-        int i = 0;
+        int i;
         for(i = 0; i < maxit; i++)
         {
             if(converged(tol))
                 break;
 
-            restart(nev);
+            restart(nev_updated);
         }
         // Sorting results
         sort_ritzpair();
 
         return i + 1;
+    }
+
+    virtual void info(int &mat_ops)
+    {
+        mat_ops = nmatop;
     }
 
     // Return converged eigenvalues
@@ -323,6 +364,7 @@ private:
     virtual void matrix_operation(Scalar *x_in, Scalar *y_out)
     {
         op_shift->shift_solve(x_in, y_out);
+        this->nmatop++;
     }
 
     // First transform back the ritz values, and then sort
