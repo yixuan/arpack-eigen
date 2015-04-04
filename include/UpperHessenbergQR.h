@@ -56,6 +56,7 @@ public:
         mat_T = mat;
 
         Scalar xi, xj, r, c, s;
+        Matrix22 Gt;
         for(int i = 0; i < n - 2; i++)
         {
             xi = mat_T(i, i);
@@ -67,23 +68,35 @@ public:
             // we first obtain the rotation matrix
             // G = [ cos  sin]
             //     [-sin  cos]
-            // and then do T[i:(i + 1), i:n] = G' * T[i:(i + 1), i:n]
-            // Since here we only want to obtain the cos and sin sequence,
-            // we only update T[i + 1, (i + 1):n]
-            mat_T.block(i + 1, i + 1, 1, n - i - 1) *= c;
-            mat_T.block(i + 1, i + 1, 1, n - i - 1) += s * mat_T.block(i, i + 1, 1, n - i - 1);
-            // Matrix22 Gt;
-            // Gt << c, -s, s, c;
-            // mat_T.block(i, i, 2, n - i + 1) = Gt * mat_T.block(i, i, 2, n - i + 1);
+            // and then do T[i:(i + 1), i:(n - 1)] = G' * T[i:(i + 1), i:(n - 1)]
+
+            Gt << c, -s, s, c;
+            mat_T.block(i, i, 2, n - i) = Gt * mat_T.block(i, i, 2, n - i);
+
+            // If we do not need to calculate the R matrix, then
+            // only the cos and sin sequences are required.
+            // In such case we only update T[i + 1, (i + 1):(n - 1)]
+            // mat_T.block(i + 1, i + 1, 1, n - i - 1) *= c;
+            // mat_T.block(i + 1, i + 1, 1, n - i - 1) += s * mat_T.block(i, i + 1, 1, n - i - 1);
         }
         // For i = n - 2
         xi = mat_T(n - 2, n - 2);
         xj = mat_T(n - 1, n - 2);
         r = std::sqrt(xi * xi + xj * xj);
-        rot_cos[n - 2] = xi / r;
-        rot_sin[n - 2] = -xj / r;
+        rot_cos[n - 2] = c = xi / r;
+        rot_sin[n - 2] = s = -xj / r;
+        Gt << c, -s, s, c;
+        mat_T.template block<2, 2>(n - 2, n - 2) = Gt * mat_T.template block<2, 2>(n - 2, n - 2);
 
         computed = true;
+    }
+
+    Matrix matrix_R()
+    {
+        if(!computed)
+            return Matrix();
+
+        return mat_T;
     }
 
     // Y -> QY = G1 * G2 * ... * Y
@@ -330,12 +343,46 @@ public:
         this->computed = true;
     }
 
-    Matrix matrix_R()
+    // Calculate RQ, which will also be a tridiagonal matrix
+    Matrix matrix_RQ()
     {
         if(!this->computed)
             return Matrix();
 
-        return this->mat_T;
+        // Make a copy of the R matrix
+        Matrix RQ(this->n, this->n);
+        RQ.setZero();
+        RQ.diagonal() = this->mat_T.diagonal();
+        RQ.diagonal(1) = this->mat_T.diagonal(1);
+
+        // [m11  m12] will point to RQ[i:(i+1), i:(i+1)]
+        // [m21  m22]
+        Scalar *m11 = RQ.data(), *m12, *m21, *m22,
+               *c = this->rot_cos.data(),
+               *s = this->rot_sin.data(),
+               tmp;
+        for(int i = 0; i < this->n - 1; i++)
+        {
+            m21 = m11 + 1;
+            m12 = m11 + this->n;
+            m22 = m12 + 1;
+            tmp = *m21;
+
+            // Update diagonal and the below-subdiagonal
+            *m11 = (*c) * (*m11) - (*s) * (*m12);
+            *m21 = (*c) * tmp - (*s) * (*m22);
+            *m22 = (*s) * tmp + (*c) * (*m22);
+
+            // Move m11 to RQ[i+1, i+1]
+            m11  = m22;
+            c++;
+            s++;
+        }
+
+        // Copy the below-subdiagonal to above-subdiagonal
+        RQ.diagonal(1) = RQ.diagonal(-1);
+
+        return RQ;
     }
 };
 

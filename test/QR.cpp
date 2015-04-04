@@ -8,7 +8,7 @@ using Eigen::VectorXd;
 void QR_UpperHessenberg()
 {
     srand(123);
-    int n = 10;
+    int n = 100;
     MatrixXd m = MatrixXd::Random(n, n);
     m.array() -= 0.5;
     MatrixXd H = m.triangularView<Eigen::Upper>();
@@ -29,8 +29,7 @@ void QR_UpperHessenberg()
     std::cout << "||QQ' - I||_inf = " << (QQt - I).cwiseAbs().maxCoeff() << std::endl;
 
     // Calculate R = Q'H
-    MatrixXd R = H;
-    decomp.apply_QtY(R);
+    MatrixXd R = decomp.matrix_R();
     MatrixXd Rlower = R.triangularView<Eigen::Lower>();
     Rlower.diagonal().setZero();
     std::cout << "whether R is upper triangular, error = "
@@ -39,7 +38,7 @@ void QR_UpperHessenberg()
     // Compare H and QR
     std::cout << "||H - QR||_inf = " << (H - Q * R).cwiseAbs().maxCoeff() << std::endl;
 
-    // Testing "apply" functions
+    // Test "apply" functions
     MatrixXd Y = MatrixXd::Random(n, n);
 
     MatrixXd QY = Y;
@@ -57,6 +56,17 @@ void QR_UpperHessenberg()
     MatrixXd YQt = Y;
     decomp.apply_YQt(YQt);
     std::cout << "max error of YQ' = " << (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() << std::endl;
+
+    // Test "apply" functions for vectors
+    VectorXd y = VectorXd::Random(n);
+
+    VectorXd Qy = y;
+    decomp.apply_QY(Qy);
+    std::cout << "max error of Qy = " << (Qy - Q * y).cwiseAbs().maxCoeff() << std::endl;
+
+    VectorXd Qty = y;
+    decomp.apply_QtY(Qty);
+    std::cout << "max error of Q'y = " << (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() << std::endl;
 }
 
 void QR_Tridiagonal()
@@ -94,7 +104,12 @@ void QR_Tridiagonal()
     // Compare H and QR
     std::cout << "||H - QR||_inf = " << (H - Q * R).cwiseAbs().maxCoeff() << std::endl;
 
-    // Testing "apply" functions
+    // Test RQ
+    MatrixXd rq = R;
+    decomp.apply_YQ(rq);
+    std::cout << "max error of RQ = " << (decomp.matrix_RQ() - rq).cwiseAbs().maxCoeff() << std::endl;
+
+    // Test "apply" functions
     MatrixXd Y = MatrixXd::Random(n, n);
 
     MatrixXd QY = Y;
@@ -112,6 +127,17 @@ void QR_Tridiagonal()
     MatrixXd YQt = Y;
     decomp.apply_YQt(YQt);
     std::cout << "max error of YQ' = " << (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() << std::endl;
+
+    // Test "apply" functions for vectors
+    VectorXd y = VectorXd::Random(n);
+
+    VectorXd Qy = y;
+    decomp.apply_QY(Qy);
+    std::cout << "max error of Qy = " << (Qy - Q * y).cwiseAbs().maxCoeff() << std::endl;
+
+    VectorXd Qty = y;
+    decomp.apply_QtY(Qty);
+    std::cout << "max error of Q'y = " << (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() << std::endl;
 }
 
 int main()

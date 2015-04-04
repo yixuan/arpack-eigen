@@ -1,9 +1,11 @@
+HEADERS = $(wildcard ../include/*.h)
+
 all: QR SymEigs
 
-QR: QR.cpp
+QR: $(HEADERS) QR.cpp
 	g++ -O2 -I../include QR.cpp -o QR
 
-SymEigs: SymEigs.cpp
+SymEigs: $(HEADERS) SymEigs.cpp
 	g++ -O2 -I../include SymEigs.cpp -o SymEigs
 
 clean:

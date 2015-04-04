@@ -119,8 +119,7 @@ private:
             // H -> Q'HQ
             // Since QR = H - mu * I, we have H = QR + mu * I
             // and therefore Q'HQ = RQ + mu * I
-            fac_H = decomp.matrix_R();
-            decomp.apply_YQ(fac_H);
+            fac_H = decomp.matrix_RQ();
             fac_H.diagonal() = fac_H.diagonal().array() + ritz_val[i];
             // em -> Q'em
             decomp.apply_QtY(em);
