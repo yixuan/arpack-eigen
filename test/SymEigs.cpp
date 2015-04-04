@@ -51,7 +51,7 @@ int main()
     std::cout << "\n===== Largest Value =====\n";
     test<LARGEST_ALGE>(A, k, m);
 
-    std::cout << "\n===== Smallest Value =====\n";
+    std::cout << "\n===== Smallest Magnitude =====\n";
     test<SMALLEST_MAGN>(A, k, m);
 
     std::cout << "\n===== Smallest Value =====\n";
