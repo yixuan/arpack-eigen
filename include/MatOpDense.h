@@ -31,7 +31,7 @@ private:
     bool sigma_is_real;
 
     // shift solve for real sigma
-    virtual void real_shift_solve(Scalar *x_in, Scalar *y_out)
+    void real_shift_solve(Scalar *x_in, Scalar *y_out)
     {
         new (&vec_x) MapVec(x_in, mat.cols());
         new (&vec_y) MapVec(y_out, mat.rows());
@@ -40,7 +40,7 @@ private:
     }
 
     // shift solve for complex sigma
-    virtual void complex_shift_solve(Scalar *x_in, Scalar *y_out)
+    void complex_shift_solve(Scalar *x_in, Scalar *y_out)
     {
         vec_cx.real() = MapVec(x_in, mat.cols());
         new (&vec_y) MapVec(y_out, mat.rows());
@@ -61,7 +61,7 @@ public:
     virtual ~MatOpDense() {}
 
     // y_out = A * x_in
-    virtual void prod(Scalar *x_in, Scalar *y_out)
+    void prod(Scalar *x_in, Scalar *y_out)
     {
         new (&vec_x) MapVec(x_in, mat.cols());
         new (&vec_y) MapVec(y_out, mat.rows());
@@ -70,7 +70,7 @@ public:
     }
 
     // y_out = A' * x_in
-    virtual void trans_prod(Scalar *x_in, Scalar *y_out)
+    void trans_prod(Scalar *x_in, Scalar *y_out)
     {
         new (&vec_x) MapVec(x_in, mat.rows());
         new (&vec_y) MapVec(y_out, mat.cols());
@@ -79,7 +79,7 @@ public:
     }
 
     // setting complex shift
-    virtual void set_shift(Scalar sigmar, Scalar sigmai)
+    void set_shift(Scalar sigmar, Scalar sigmai)
     {
         if(std::abs(sigmai) < std::sqrt(std::numeric_limits<Scalar>::epsilon()))
         {
@@ -96,7 +96,7 @@ public:
     }
 
     // y_out = inv(A - sigma * I) * x_in
-    virtual void shift_solve(Scalar *x_in, Scalar *y_out)
+    void shift_solve(Scalar *x_in, Scalar *y_out)
     {
         if(sigma_is_real)
             real_shift_solve(x_in, y_out);

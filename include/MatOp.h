@@ -7,10 +7,9 @@ class MatOp
 private:
     // Dimension of the matrix
     // m rows and n columns
-    // In eigenvalue problems, they are assumed to be equal,
-    // and only n is used.
-    int m;
-    int n;
+    // In eigenvalue problems, they are assumed to be equal.
+    const int m;
+    const int n;
 
 public:
     // Constructor
@@ -54,7 +53,7 @@ public:
     virtual ~MatOpWithRealShiftSolve() {}
 
     // setting sigma
-    virtual void set_shift(Scalar sigma) {}
+    virtual void set_shift(Scalar sigma) = 0;
     // y_out = inv(A - sigma * I) * x_in
     virtual void shift_solve(Scalar *x_in, Scalar *y_out) = 0;
 };
@@ -77,9 +76,7 @@ public:
         this->set_shift(sigma, Scalar(0));
     }
     // setting complex shift
-    virtual void set_shift(Scalar sigmar, Scalar sigmai) {}
-    // y_out = inv(A - sigma * I) * x_in
-    virtual void shift_solve(Scalar *x_in, Scalar *y_out) = 0;
+    virtual void set_shift(Scalar sigmar, Scalar sigmai) = 0;
 };
 
 
