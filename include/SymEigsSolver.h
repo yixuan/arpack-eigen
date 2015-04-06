@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
+#include <stdexcept>
 
 #include "MatOp.h"
 #include "SelectionRule.h"
@@ -231,20 +232,28 @@ public:
         dim_n(op->rows()),
         nev(nev_),
         nev_updated(nev_),
-        ncv(ncv_),
+        ncv(ncv_ > dim_n ? dim_n : ncv_),
         nmatop(0),
-        fac_V(dim_n, ncv),
-        fac_H(ncv, ncv),
-        fac_f(dim_n),
-        ritz_val(ncv),
-        ritz_vec(ncv, nev),
-        ritz_conv(nev),
         prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(2.0 / 3)))
-    {}
+    {
+        if(nev_ < 1 || nev_ >= dim_n)
+            throw std::invalid_argument("nev must be greater than zero and less than the size of the matrix");
+
+        if(ncv_ <= nev_)
+            throw std::invalid_argument("ncv must be greater than nev");
+    }
 
     // Initialization and clean-up
     virtual void init(Scalar *init_resid)
     {
+        // Reset all matrices/vectors to zero
+        fac_V.resize(dim_n, ncv);
+        fac_H.resize(ncv, ncv);
+        fac_f.resize(dim_n);
+        ritz_val.resize(ncv);
+        ritz_vec.resize(ncv, nev);
+        ritz_conv.resize(nev);
+
         fac_V.setZero();
         fac_H.setZero();
         fac_f.setZero();
@@ -256,7 +265,11 @@ public:
 
         Vector v(dim_n);
         std::copy(init_resid, init_resid + dim_n, v.data());
-        v.normalize();
+        Scalar vnorm = v.norm();
+        if(vnorm < prec)
+            throw std::invalid_argument("initial residual vector cannot be zero");
+        v /= vnorm;
+
         Vector w(dim_n);
         matrix_operation(v.data(), w.data());
 
