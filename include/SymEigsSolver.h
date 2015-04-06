@@ -58,7 +58,7 @@ private:
     }
 
     // Arnoldi factorization starting from step-k
-    virtual void factorize_from(int from_k, int to_m, const Vector &fk)
+    void factorize_from(int from_k, int to_m, const Vector &fk)
     {
         if(to_m <= from_k) return;
 
@@ -99,7 +99,7 @@ private:
     }
 
     // Implicitly restarted Arnoldi factorization
-    virtual void restart(int k)
+    void restart(int k)
     {
         if(k >= ncv)
             return;
@@ -132,7 +132,7 @@ private:
     }
 
     // Test convergence
-    virtual bool converged(Scalar tol)
+    bool converged(Scalar tol)
     {
         // thresh = tol * max(prec, abs(theta)), theta for ritz value
         Array thresh = tol * ritz_val.head(nev).array().abs().max(prec);
@@ -152,7 +152,7 @@ private:
     }
 
     // Retrieve and sort ritz values and ritz vectors
-    virtual void retrieve_ritzpair()
+    void retrieve_ritzpair()
     {
         EigenSolver eig(fac_H);
         Vector evals = eig.eigenvalues();
@@ -244,7 +244,7 @@ public:
     }
 
     // Initialization and clean-up
-    virtual void init(Scalar *init_resid)
+    void init(Scalar *init_resid)
     {
         // Reset all matrices/vectors to zero
         fac_V.resize(dim_n, ncv);
@@ -278,7 +278,7 @@ public:
         fac_V.col(0) = v;
     }
     // Initialization with random initial coefficients
-    virtual void init()
+    void init()
     {
         Vector init_resid = Vector::Random(dim_n);
         init_resid.array() -= 0.5;
@@ -286,7 +286,7 @@ public:
     }
 
     // Compute Ritz pairs and return the number of iteration
-    virtual int compute(int maxit = 1000, Scalar tol = 1e-10)
+    int compute(int maxit = 1000, Scalar tol = 1e-10)
     {
         // The m-step Arnoldi factorization
         factorize_from(1, ncv, fac_f);
@@ -306,13 +306,13 @@ public:
         return i + 1;
     }
 
-    virtual void info(int &mat_ops)
+    void info(int &mat_ops)
     {
         mat_ops = nmatop;
     }
 
     // Return converged eigenvalues
-    virtual Vector eigenvalues()
+    Vector eigenvalues()
     {
         int nconv = ritz_conv.cast<int>().sum();
         Vector res(nconv);
@@ -334,7 +334,7 @@ public:
     }
 
     // Return converged eigenvectors
-    virtual Matrix eigenvectors()
+    Matrix eigenvectors()
     {
         int nconv = ritz_conv.cast<int>().sum();
         Matrix res(dim_n, nconv);
@@ -373,14 +373,14 @@ private:
     MatOpWithRealShiftSolve<Scalar> *op_shift;
 
     // Shift solve in this case
-    virtual void matrix_operation(Scalar *x_in, Scalar *y_out)
+    void matrix_operation(Scalar *x_in, Scalar *y_out)
     {
         op_shift->shift_solve(x_in, y_out);
         this->nmatop++;
     }
 
     // First transform back the ritz values, and then sort
-    virtual void sort_ritzpair()
+    void sort_ritzpair()
     {
         Array ritz_val_org = Scalar(1.0) / this->ritz_val.head(this->nev).array() + sigma;
         this->ritz_val.head(this->nev) = ritz_val_org;
