@@ -23,9 +23,9 @@ void test(const MatrixXd &A, int k, int m)
     MatOpDense<double> op(mat);
     SymEigsSolver<double, SelectionRule> eigs(&op, k, m);
     eigs.init();
-    int niter = eigs.compute();
-    int nops;
-    eigs.info(nops);
+    int nconv = eigs.compute();
+    int niter, nops;
+    eigs.info(niter, nops);
 
     VectorXd evals = eigs.eigenvalues();
     MatrixXd evecs = eigs.eigenvectors();
@@ -33,6 +33,7 @@ void test(const MatrixXd &A, int k, int m)
     std::cout << "computed eigenvalues D = \n" << evals.transpose() << "\n";
     //std::cout << "computed eigenvectors U = \n" << evecs << "\n\n";
     std::cout << "||AU - UD||_inf = " << (mat * evecs - evecs * evals.asDiagonal()).array().abs().maxCoeff() << "\n";
+    std::cout << "nconv = " << nconv << "\n";
     std::cout << "niter = " << niter << "\n";
     std::cout << "nops = " << nops << "\n";
 }
