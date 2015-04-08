@@ -29,7 +29,11 @@ private:
     MatOp<Scalar> *op;   // object to conduct matrix operation,
                          // e.g. matrix-vector product
     const int dim_n;     // dimension of matrix A
+
+protected:
     const int nev;       // number of eigenvalues requested
+
+private:
     int nev_updated;     // increase nev in factorizatio if needed
     const int ncv;       // number of ritz values
 
@@ -42,7 +46,10 @@ private:
     Matrix fac_H;        // H matrix in the Arnoldi factorization
     Vector fac_f;        // residual in the Arnoldi factorization
 
+protected:
     Vector ritz_val;     // ritz values
+
+private:
     Matrix ritz_vec;     // ritz vectors
     BoolArray ritz_conv; // indicator of the convergence of ritz values
 
@@ -200,6 +207,7 @@ private:
         }
     }
 
+protected:
     // Sort the first nev Ritz pairs in decreasing magnitude order
     // This is used to return the final results
     virtual void sort_ritzpair()
