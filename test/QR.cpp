@@ -1,11 +1,13 @@
 // Test ../include/UpperHessenbergQR.h
-#include <iostream>
 #include <UpperHessenbergQR.h>
+
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-void QR_UpperHessenberg()
+TEST_CASE("QR of upper Hessenberg matrix", "[QR]")
 {
     srand(123);
     int n = 100;
@@ -23,53 +25,62 @@ void QR_UpperHessenberg()
 
     // Test orthogonality
     MatrixXd QtQ = Q.transpose() * Q;
-    std::cout << "||Q'Q - I||_inf = " << (QtQ - I).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "||Q'Q - I||_inf = " << (QtQ - I).cwiseAbs().maxCoeff() );
+    REQUIRE( (QtQ - I).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     MatrixXd QQt = Q * Q.transpose();
-    std::cout << "||QQ' - I||_inf = " << (QQt - I).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "||QQ' - I||_inf = " << (QQt - I).cwiseAbs().maxCoeff() );
+    REQUIRE( (QQt - I).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     // Calculate R = Q'H
     MatrixXd R = decomp.matrix_R();
     MatrixXd Rlower = R.triangularView<Eigen::Lower>();
     Rlower.diagonal().setZero();
-    std::cout << "whether R is upper triangular, error = "
-              << Rlower.cwiseAbs().maxCoeff() << std::endl;
+    INFO( "Whether R is upper triangular, error = " << Rlower.cwiseAbs().maxCoeff() );
+    REQUIRE( Rlower.cwiseAbs().maxCoeff() == Approx(0.0) );
 
     // Compare H and QR
-    std::cout << "||H - QR||_inf = " << (H - Q * R).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "||H - QR||_inf = " << (H - Q * R).cwiseAbs().maxCoeff() );
+    REQUIRE( (H - Q * R).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     // Test "apply" functions
     MatrixXd Y = MatrixXd::Random(n, n);
 
     MatrixXd QY = Y;
     decomp.apply_QY(QY);
-    std::cout << "max error of QY = " << (QY - Q * Y).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of QY = " << (QY - Q * Y).cwiseAbs().maxCoeff() );
+    REQUIRE( (QY - Q * Y).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     MatrixXd YQ = Y;
     decomp.apply_YQ(YQ);
-    std::cout << "max error of YQ = " << (YQ - Y * Q).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of QY = " << (YQ - Y * Q).cwiseAbs().maxCoeff() );
+    REQUIRE( (YQ - Y * Q).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     MatrixXd QtY = Y;
     decomp.apply_QtY(QtY);
-    std::cout << "max error of Q'Y = " << (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of QY = " << (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() );
+    REQUIRE( (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     MatrixXd YQt = Y;
     decomp.apply_YQt(YQt);
-    std::cout << "max error of YQ' = " << (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of QY = " << (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() );
+    REQUIRE( (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     // Test "apply" functions for vectors
     VectorXd y = VectorXd::Random(n);
 
     VectorXd Qy = y;
     decomp.apply_QY(Qy);
-    std::cout << "max error of Qy = " << (Qy - Q * y).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of Qy = " << (Qy - Q * y).cwiseAbs().maxCoeff() );
+    REQUIRE( (Qy - Q * y).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     VectorXd Qty = y;
     decomp.apply_QtY(Qty);
-    std::cout << "max error of Q'y = " << (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of Qy = " << (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() );
+    REQUIRE( (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() == Approx(0.0) );
 }
 
-void QR_Tridiagonal()
+TEST_CASE("QR of Tridiagonal matrix", "[QR]")
 {
     srand(123);
     int n = 100;
@@ -89,63 +100,63 @@ void QR_Tridiagonal()
 
     // Test orthogonality
     MatrixXd QtQ = Q.transpose() * Q;
-    std::cout << "||Q'Q - I||_inf = " << (QtQ - I).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "||Q'Q - I||_inf = " << (QtQ - I).cwiseAbs().maxCoeff() );
+    REQUIRE( (QtQ - I).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     MatrixXd QQt = Q * Q.transpose();
-    std::cout << "||QQ' - I||_inf = " << (QQt - I).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "||QQ' - I||_inf = " << (QQt - I).cwiseAbs().maxCoeff() );
+    REQUIRE( (QQt - I).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     // Calculate R = Q'H
     MatrixXd R = decomp.matrix_R();
     MatrixXd Rlower = R.triangularView<Eigen::Lower>();
     Rlower.diagonal().setZero();
-    std::cout << "whether R is upper triangular, error = "
-              << Rlower.cwiseAbs().maxCoeff() << std::endl;
+    INFO( "Whether R is upper triangular, error = " << Rlower.cwiseAbs().maxCoeff() );
+    REQUIRE( Rlower.cwiseAbs().maxCoeff() == Approx(0.0) );
 
     // Compare H and QR
-    std::cout << "||H - QR||_inf = " << (H - Q * R).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "||H - QR||_inf = " << (H - Q * R).cwiseAbs().maxCoeff() );
+    REQUIRE( (H - Q * R).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     // Test RQ
     MatrixXd rq = R;
     decomp.apply_YQ(rq);
-    std::cout << "max error of RQ = " << (decomp.matrix_RQ() - rq).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of RQ = " << (decomp.matrix_RQ() - rq).cwiseAbs().maxCoeff() );
+    REQUIRE( (decomp.matrix_RQ() - rq).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     // Test "apply" functions
     MatrixXd Y = MatrixXd::Random(n, n);
 
     MatrixXd QY = Y;
     decomp.apply_QY(QY);
-    std::cout << "max error of QY = " << (QY - Q * Y).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of QY = " << (QY - Q * Y).cwiseAbs().maxCoeff() );
+    REQUIRE( (QY - Q * Y).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     MatrixXd YQ = Y;
     decomp.apply_YQ(YQ);
-    std::cout << "max error of YQ = " << (YQ - Y * Q).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of QY = " << (YQ - Y * Q).cwiseAbs().maxCoeff() );
+    REQUIRE( (YQ - Y * Q).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     MatrixXd QtY = Y;
     decomp.apply_QtY(QtY);
-    std::cout << "max error of Q'Y = " << (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of QY = " << (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() );
+    REQUIRE( (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     MatrixXd YQt = Y;
     decomp.apply_YQt(YQt);
-    std::cout << "max error of YQ' = " << (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of QY = " << (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() );
+    REQUIRE( (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     // Test "apply" functions for vectors
     VectorXd y = VectorXd::Random(n);
 
     VectorXd Qy = y;
     decomp.apply_QY(Qy);
-    std::cout << "max error of Qy = " << (Qy - Q * y).cwiseAbs().maxCoeff() << std::endl;
+    INFO( "max error of Qy = " << (Qy - Q * y).cwiseAbs().maxCoeff() );
+    REQUIRE( (Qy - Q * y).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     VectorXd Qty = y;
     decomp.apply_QtY(Qty);
-    std::cout << "max error of Q'y = " << (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() << std::endl;
-}
-
-int main()
-{
-    std::cout << "========== Test of upper Hessenberg matrix ==========\n";
-    QR_UpperHessenberg();
-
-    std::cout << "\n========== Test of Tridiagonal matrix ==========\n";
-    QR_Tridiagonal();
-
+    INFO( "max error of Qy = " << (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() );
+    REQUIRE( (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() == Approx(0.0) );
 }
