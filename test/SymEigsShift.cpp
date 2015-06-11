@@ -1,14 +1,19 @@
+#include <Eigen/Dense>
 #include <iostream>
+
 #include <SymEigsSolver.h>
 #include <MatOpDense.h>
 
-using Eigen::MatrixXd;
-using Eigen::VectorXd;
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"
+
+typedef Eigen::MatrixXd Matrix;
+typedef Eigen::VectorXd Vector;
 
 template <int SelectionRule>
-void run_test(const MatrixXd &A, int k, int m, double sigma)
+void run_test(const Matrix &A, int k, int m, double sigma)
 {
-    MatrixXd mat;
+    Matrix mat;
     if(SelectionRule == BOTH_ENDS)
     {
         mat = A.adjoint() + A;
@@ -16,8 +21,8 @@ void run_test(const MatrixXd &A, int k, int m, double sigma)
         mat = A.adjoint() * A;
     }
 
-    Eigen::SelfAdjointEigenSolver<MatrixXd> eig(mat);
-    std::cout << "all eigenvalues = \n" << eig.eigenvalues().transpose() << "\n";
+    // Eigen::SelfAdjointEigenSolver<MatrixXd> eig(mat);
+    // std::cout << "all eigenvalues = \n" << eig.eigenvalues().transpose() << "\n";
 
     MatOpDense<double> op(mat);
     SymEigsShiftSolver<double, SelectionRule> eigs(&op, k, m, sigma);
@@ -26,43 +31,49 @@ void run_test(const MatrixXd &A, int k, int m, double sigma)
     int niter, nops;
     eigs.info(niter, nops);
 
-    if(nconv > 0)
-    {
-        VectorXd evals = eigs.eigenvalues();
-        MatrixXd evecs = eigs.eigenvectors();
+    REQUIRE( nconv > 0 );
 
-        std::cout << "computed eigenvalues D = \n" << evals.transpose() << "\n";
-        //std::cout << "computed eigenvectors U = \n" << evecs << "\n\n";
-        std::cout << "||AU - UD||_inf = " << (mat * evecs - evecs * evals.asDiagonal()).array().abs().maxCoeff() << "\n";
-    }
-    std::cout << "nconv = " << nconv << "\n";
-    std::cout << "niter = " << niter << "\n";
-    std::cout << "nops = " << nops << "\n";
+    Vector evals = eigs.eigenvalues();
+    Matrix evecs = eigs.eigenvectors();
+
+    // evals.print("computed eigenvalues D =");
+    // evecs.print("computed eigenvectors U =");
+    Matrix err = mat * evecs - evecs * evals.asDiagonal();
+
+    INFO( "nconv = " << nconv );
+    INFO( "niter = " << niter );
+    INFO( "nops = " << nops );
+    INFO( "||AU - UD||_inf = " << err.array().abs().maxCoeff() );
+    REQUIRE( err.array().abs().maxCoeff() == Approx(0.0) );
 }
 
-int main()
+TEST_CASE("Eigensolver of symmetric real matrix in shift-and-invert mode", "[eigs_sym_shift]")
 {
     srand(123);
-    MatrixXd A = MatrixXd::Random(10, 10);
+    Matrix A = Eigen::MatrixXd::Random(10, 10);
 
     int k = 3;
     int m = 6;
     double sigma = 1.0;
 
-    std::cout << "===== Largest Magnitude =====\n";
-    run_test<LARGEST_MAGN>(A, k, m, sigma);
-
-    std::cout << "\n===== Largest Value =====\n";
-    run_test<LARGEST_ALGE>(A, k, m, sigma);
-
-    std::cout << "\n===== Smallest Magnitude =====\n";
-    run_test<SMALLEST_MAGN>(A, k, m, sigma);
-
-    std::cout << "\n===== Smallest Value =====\n";
-    run_test<SMALLEST_ALGE>(A, k, m, sigma);
-
-    std::cout << "\n===== Both Ends =====\n";
-    run_test<BOTH_ENDS>(A, k, m, sigma);
-
-    return 0;
+    SECTION( "Largest Magnitude" )
+    {
+        run_test<LARGEST_MAGN>(A, k, m, sigma);
+    }
+    SECTION( "Largest Value" )
+    {
+        run_test<LARGEST_ALGE>(A, k, m, sigma);
+    }
+    SECTION( "Smallest Magnitude" )
+    {
+        run_test<SMALLEST_MAGN>(A, k, m, sigma);
+    }
+    SECTION( "Smallest Value" )
+    {
+        run_test<SMALLEST_ALGE>(A, k, m, sigma);
+    }
+    SECTION( "Both Ends" )
+    {
+        run_test<BOTH_ENDS>(A, k, m, sigma);
+    }
 }
