@@ -34,7 +34,6 @@ protected:
     const int nev;       // number of eigenvalues requested
 
 private:
-    int nev_updated;     // increase nev in factorizatio if needed
     const int ncv;       // number of ritz values
     int nmatop;          // number of matrix operations called
     int niter;           // number of restarting iterations
@@ -136,24 +135,31 @@ private:
         retrieve_ritzpair();
     }
 
-    // Test convergence
-    bool converged(Scalar tol)
+    // Calculate the number of converged Ritz values
+    int num_converged(Scalar tol)
     {
         // thresh = tol * max(prec, abs(theta)), theta for ritz value
         Array thresh = tol * ritz_val.head(nev).array().abs().max(prec);
         Array resid =  ritz_vec.template bottomRows<1>().transpose().array().abs() * fac_f.norm();
+        // Converged "wanted" ritz values
         ritz_conv = (resid < thresh);
 
-        // Converged "wanted" ritz values
-        int nconv = ritz_conv.cast<int>().sum();
-        // Adjust nev_updated, according to dsaup2.f line 691~700 in ARPACK
-        nev_updated = nev + std::min(nconv, (ncv - nev) / 2);
-        if(nev == 1 && ncv >= 6)
-            nev_updated = ncv / 2;
-        else if(nev == 1 && ncv > 2)
-            nev_updated = 2;
+        return ritz_conv.cast<int>().sum();
+    }
 
-        return nconv >= nev;
+    // Return the adjusted nev for restarting
+    int nev_adjusted(int nconv)
+    {
+        int nev_new = nev;
+
+        // Adjust nev_new, according to dsaup2.f line 677~684 in ARPACK
+        nev_new = nev + std::min(nconv, (ncv - nev) / 2);
+        if(nev == 1 && ncv >= 6)
+            nev_new = ncv / 2;
+        else if(nev == 1 && ncv > 2)
+            nev_new = 2;
+
+        return nev_new;
     }
 
     // Retrieve and sort ritz values and ritz vectors
@@ -237,7 +243,6 @@ public:
         op(op_),
         dim_n(op->rows()),
         nev(nev_),
-        nev_updated(nev_),
         ncv(ncv_ > dim_n ? dim_n : ncv_),
         nmatop(0),
         niter(0),
@@ -301,20 +306,22 @@ public:
         factorize_from(1, ncv, fac_f);
         retrieve_ritzpair();
         // Restarting
-        int i;
+        int i, nconv, nev_adj;
         for(i = 0; i < maxit; i++)
         {
-            if(converged(tol))
+            nconv = num_converged(tol);
+            if(nconv >= nev)
                 break;
 
-            restart(nev_updated);
+            nev_adj = nev_adjusted(nconv);
+            restart(nev_adj);
         }
         // Sorting results
         sort_ritzpair();
 
         niter += i + 1;
 
-        return std::min(nev, ritz_conv.cast<int>().sum());
+        return std::min(nev, nconv);
     }
 
     void info(int &iters, int &mat_ops)
