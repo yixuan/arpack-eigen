@@ -1,15 +1,22 @@
+CXX = g++
+CXXFLAGS = -std=c++11 -Wall -O2
+CPPFLAGS = -I../include
+LDFLAGS =
+LIBS =
+
 HEADERS = $(wildcard ../include/*.h)
+
+.PHONY: all test clean
 
 all: QR.out SymEigs.out SymEigsShift.out
 
-QR.out: $(HEADERS) QR.cpp
-	g++ -O2 -I../include QR.cpp -o QR.out
+test:
+	./QR.out
+	./SymEigs.out
+	./SymEigsShift.out
 
-SymEigs.out: $(HEADERS) SymEigs.cpp
-	g++ -O2 -I../include SymEigs.cpp -o SymEigs.out
-
-SymEigsShift.out: $(HEADERS) SymEigsShift.cpp
-	g++ -O2 -I../include SymEigsShift.cpp -o SymEigsShift.out
+%.out: %.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $< -o $@ $(LDFLAGS) $(LIBS)
 
 clean:
 	rm *.out
