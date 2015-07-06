@@ -4,19 +4,20 @@ CPPFLAGS = -I../include
 LDFLAGS =
 LIBS =
 
-HEADERS = $(wildcard ../include/*.h)
+HEADERS = $(wildcard ../include/MatOp/*.h) $(wildcard ../include/*.h)
+
 
 .PHONY: all test clean
 
 all: QR.out SymEigs.out SymEigsShift.out
 
 test:
-	./QR.out
-	./SymEigs.out
-	./SymEigsShift.out
+	-./QR.out
+	-./SymEigs.out
+	-./SymEigsShift.out
 
 %.out: %.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $< -o $@ $(LDFLAGS) $(LIBS)
 
 clean:
-	rm *.out
+	-rm *.out
