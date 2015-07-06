@@ -31,22 +31,14 @@ enum SELECT_EIGENVALUE_ALIAS
     WHICH_BE
 };
 
-// Default comparator: largest value come on the left
-// This covers [float, double] x [LARGEST_REAL, LARGEST_ALGE]
-//
-// BOTH_ENDS will also be attributed to this case, and we need
-// to move those smallest values to the proper locations.
-// This is done in SymEigsSolver.h => retrieve_ritzpair()
+// Default comparator: an empty class without
+// operator() definition, so it won't compile
+// when operator() is called on this class
 template <typename Scalar, int SelectionRule>
 class EigenvalueComparator
 {
 public:
     typedef std::pair<Scalar, int> SortPair;
-
-    bool operator() (SortPair v1, SortPair v2)
-    {
-        return v1.first > v2.first;
-    }
 };
 
 // Specialization for LARGEST_MAGN
@@ -87,7 +79,37 @@ public:
 
     bool operator() (SortPair v1, SortPair v2)
     {
-        return v1.first.imag() > v2.first.imag();
+        return std::abs(v1.first.imag()) > std::abs(v2.first.imag());
+    }
+};
+
+// Specialization for LARGEST_ALGE
+// This covers [float, double] x [LARGEST_ALGE]
+template <typename Scalar>
+class EigenvalueComparator<Scalar, LARGEST_ALGE>
+{
+public:
+    typedef std::pair<Scalar, int> SortPair;
+
+    bool operator() (SortPair v1, SortPair v2)
+    {
+        return v1.first > v2.first;
+    }
+};
+
+// Here BOTH_ENDS is the same as LARGEST_ALGE, but
+// we need some additional steps, which are done in
+// SymEigsSolver.h => retrieve_ritzpair().
+// There we move the smallest values to the proper locations.
+template <typename Scalar>
+class EigenvalueComparator<Scalar, BOTH_ENDS>
+{
+public:
+    typedef std::pair<Scalar, int> SortPair;
+
+    bool operator() (SortPair v1, SortPair v2)
+    {
+        return v1.first > v2.first;
     }
 };
 
@@ -129,7 +151,7 @@ public:
 
     bool operator() (SortPair v1, SortPair v2)
     {
-        return v1.first.imag() <= v2.first.imag();
+        return std::abs(v1.first.imag()) <= std::abs(v2.first.imag());
     }
 };
 
