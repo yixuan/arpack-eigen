@@ -397,7 +397,7 @@ private:
     {
         Array ritz_val_org = Scalar(1.0) / this->ritz_val.head(this->nev).array() + sigma;
         this->ritz_val.head(this->nev) = ritz_val_org;
-        SymEigsSolver<Scalar, SelectionRule>::sort_ritzpair();
+        SymEigsSolver<Scalar, SelectionRule, OpType>::sort_ritzpair();
     }
 public:
     SymEigsShiftSolver(OpType *op_, int nev_, int ncv_, Scalar sigma_) :
