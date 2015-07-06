@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include <SymEigsSolver.h>
-#include <MatOpDense.h>
+#include <MatOp/DenseSymShiftSolve.h>
 
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
@@ -24,12 +24,12 @@ void run_test(const Matrix &A, int k, int m, double sigma)
     // Eigen::SelfAdjointEigenSolver<MatrixXd> eig(mat);
     // std::cout << "all eigenvalues = \n" << eig.eigenvalues().transpose() << "\n";
 
-    MatOpDense<double> op(mat);
-    SymEigsShiftSolver<double, SelectionRule> eigs(&op, k, m, sigma);
+    DenseSymShiftSolve<double> op(mat);
+    SymEigsShiftSolver<double, SelectionRule, DenseSymShiftSolve<double>> eigs(&op, k, m, sigma);
     eigs.init();
     int nconv = eigs.compute();
-    int niter, nops;
-    eigs.info(niter, nops);
+    int niter = eigs.num_iterations();
+    int nops = eigs.num_operations();
 
     REQUIRE( nconv > 0 );
 
