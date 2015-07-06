@@ -1,7 +1,8 @@
-#ifndef UpperHessenbergQR_H
-#define UpperHessenbergQR_H
+#ifndef UPPER_HESSENBERG_QR_H
+#define UPPER_HESSENBERG_QR_H
 
 #include <Eigen/Dense>
+#include <stdexcept>
 
 // QR decomposition of an upper Hessenberg matrix
 template <typename Scalar = double>
@@ -53,7 +54,8 @@ public:
         rot_cos.resize(n - 1);
         rot_sin.resize(n - 1);
 
-        mat_T = mat;
+        mat_T = mat.template triangularView<Eigen::Upper>();
+        mat_T.diagonal(-1) = mat.diagonal(-1);
 
         Scalar xi, xj, r, c, s;
         Matrix22 Gt;
@@ -94,34 +96,52 @@ public:
     Matrix matrix_R()
     {
         if(!computed)
-            return Matrix();
+            throw std::logic_error("UpperHessenbergQR: need to call compute() first");
 
         return mat_T;
+    }
+
+    // Calculate RQ, which will also be an upper Hessenberg matrix
+    virtual Matrix matrix_RQ()
+    {
+        if(!computed)
+            throw std::logic_error("UpperHessenbergQR: need to call compute() first");
+
+        // Make a copy of the R matrix
+        Matrix RQ = mat_T.template triangularView<Eigen::Upper>();
+
+        Scalar *c = rot_cos.data(),
+               *s = rot_sin.data();
+        for(int i = 0; i < n - 1; i++)
+        {
+            // RQ[, i:(i + 1)] = RQ[, i:(i + 1)] * Gi
+            // Gi = [ cos[i]  sin[i]]
+            //      [-sin[i]  cos[i]]
+            Vector Yi = RQ.block(0, i, i + 2, 1);
+            RQ.block(0, i, i + 2, 1)     = (*c) * Yi - (*s) * RQ.block(0, i + 1, i + 2, 1);
+            RQ.block(0, i + 1, i + 2, 1) = (*s) * Yi + (*c) * RQ.block(0, i + 1, i + 2, 1);
+            c++;
+            s++;
+        }
+
+        return RQ;
     }
 
     // Y -> QY = G1 * G2 * ... * Y
     void apply_QY(Vector &Y)
     {
         if(!computed)
-            return;
+            throw std::logic_error("UpperHessenbergQR: need to call compute() first");
 
-        Scalar *c = rot_cos.data() + n - 2,
-               *s = rot_sin.data() + n - 2,
-               *Yi = Y.data() + n - 2,
-               tmp;
+        Scalar tmp;
         for(int i = n - 2; i >= 0; i--)
         {
             // Y[i:(i + 1)] = Gi * Y[i:(i + 1)]
             // Gi = [ cos[i]  sin[i]]
             //      [-sin[i]  cos[i]]
-            tmp = *Yi;
-            // Yi[0] == Y[i], Yi[1] == Y[i + 1]
-            Yi[0] =  (*c) * tmp + (*s) * Yi[1];
-            Yi[1] = -(*s) * tmp + (*c) * Yi[1];
-
-            Yi--;
-            c--;
-            s--;
+            tmp      = Y[i];
+            Y[i]     =  rot_cos[i] * tmp + rot_sin[i] * Y[i + 1];
+            Y[i + 1] = -rot_sin[i] * tmp + rot_cos[i] * Y[i + 1];
         }
     }
 
@@ -129,25 +149,17 @@ public:
     void apply_QtY(Vector &Y)
     {
         if(!computed)
-            return;
+            throw std::logic_error("UpperHessenbergQR: need to call compute() first");
 
-        Scalar *c = rot_cos.data(),
-               *s = rot_sin.data(),
-               *Yi = Y.data(),
-               tmp;
+        Scalar tmp;
         for(int i = 0; i < n - 1; i++)
         {
             // Y[i:(i + 1)] = Gi' * Y[i:(i + 1)]
             // Gi = [ cos[i]  sin[i]]
             //      [-sin[i]  cos[i]]
-            tmp = *Yi;
-            // Yi[0] == Y[i], Yi[1] == Y[i + 1]
-            Yi[0] = (*c) * tmp - (*s) * Yi[1];
-            Yi[1] = (*s) * tmp + (*c) * Yi[1];
-
-            Yi++;
-            c++;
-            s++;
+            tmp      = Y[i];
+            Y[i]     = rot_cos[i] * tmp - rot_sin[i] * Y[i + 1];
+            Y[i + 1] = rot_sin[i] * tmp + rot_cos[i] * Y[i + 1];
         }
     }
 
@@ -155,19 +167,20 @@ public:
     void apply_QY(Matrix &Y)
     {
         if(!computed)
-            return;
+            throw std::logic_error("UpperHessenbergQR: need to call compute() first");
 
         Scalar *c = rot_cos.data() + n - 2,
                *s = rot_sin.data() + n - 2;
-        RowVector Yi(Y.cols());
+        RowVector Yi(Y.cols()), Yi1(Y.cols());
         for(int i = n - 2; i >= 0; i--)
         {
             // Y[i:(i + 1), ] = Gi * Y[i:(i + 1), ]
             // Gi = [ cos[i]  sin[i]]
             //      [-sin[i]  cos[i]]
-            Yi = Y.row(i);
-            Y.row(i)     =  (*c) * Yi + (*s) * Y.row(i + 1);
-            Y.row(i + 1) = -(*s) * Yi + (*c) * Y.row(i + 1);
+            Yi  = Y.row(i);
+            Yi1 = Y.row(i + 1);
+            Y.row(i)     =  (*c) * Yi + (*s) * Yi1;
+            Y.row(i + 1) = -(*s) * Yi + (*c) * Yi1;
             c--;
             s--;
         }
@@ -177,19 +190,20 @@ public:
     void apply_QtY(Matrix &Y)
     {
         if(!computed)
-            return;
+            throw std::logic_error("UpperHessenbergQR: need to call compute() first");
 
         Scalar *c = rot_cos.data(),
                *s = rot_sin.data();
-        RowVector Yi(Y.cols());
+        RowVector Yi(Y.cols()), Yi1(Y.cols());
         for(int i = 0; i < n - 1; i++)
         {
             // Y[i:(i + 1), ] = Gi' * Y[i:(i + 1), ]
             // Gi = [ cos[i]  sin[i]]
             //      [-sin[i]  cos[i]]
             Yi = Y.row(i);
-            Y.row(i)     = (*c) * Yi - (*s) * Y.row(i + 1);
-            Y.row(i + 1) = (*s) * Yi + (*c) * Y.row(i + 1);
+            Yi1 = Y.row(i + 1);
+            Y.row(i)     = (*c) * Yi - (*s) * Yi1;
+            Y.row(i + 1) = (*s) * Yi + (*c) * Yi1;
             c++;
             s++;
         }
@@ -199,7 +213,7 @@ public:
     void apply_YQ(Matrix &Y)
     {
         if(!computed)
-            return;
+            throw std::logic_error("UpperHessenbergQR: need to call compute() first");
 
         Scalar *c = rot_cos.data(),
                *s = rot_sin.data();
@@ -221,7 +235,7 @@ public:
     void apply_YQt(Matrix &Y)
     {
         if(!computed)
-            return;
+            throw std::logic_error("UpperHessenbergQR: need to call compute() first");
 
         Scalar *c = rot_cos.data() + n - 2,
                *s = rot_sin.data() + n - 2;
@@ -253,10 +267,6 @@ private:
 public:
     TridiagQR() :
         UpperHessenbergQR<Scalar>()
-    {}
-
-    TridiagQR(int n_) :
-        UpperHessenbergQR<Scalar>(n_)
     {}
 
     TridiagQR(const Matrix &mat) :
@@ -347,7 +357,7 @@ public:
     Matrix matrix_RQ()
     {
         if(!this->computed)
-            return Matrix();
+            throw std::logic_error("TridiagQR: need to call compute() first");
 
         // Make a copy of the R matrix
         Matrix RQ(this->n, this->n);
@@ -388,4 +398,4 @@ public:
 
 
 
-#endif // UpperHessenbergQR_H
+#endif // UPPER_HESSENBERG_QR_H
