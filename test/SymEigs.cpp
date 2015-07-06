@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include <SymEigsSolver.h>
-#include <MatOpDense.h>
+#include <MatOp/DenseGenMatProd.h>
 
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
@@ -24,12 +24,12 @@ void run_test(const Matrix &A, int k, int m)
     // Eigen::SelfAdjointEigenSolver<MatrixXd> eig(mat);
     // std::cout << "all eigenvalues = \n" << eig.eigenvalues().transpose() << "\n";
 
-    MatOpDense<double> op(mat);
-    SymEigsSolver<double, SelectionRule> eigs(&op, k, m);
+    DenseGenMatProd<double> op(mat);
+    SymEigsSolver<double, SelectionRule, DenseGenMatProd<double>> eigs(&op, k, m);
     eigs.init();
     int nconv = eigs.compute();
-    int niter, nops;
-    eigs.info(niter, nops);
+    int niter = eigs.num_iterations();
+    int nops = eigs.num_operations();
 
     REQUIRE( nconv > 0 );
 
@@ -47,14 +47,8 @@ void run_test(const Matrix &A, int k, int m)
     REQUIRE( err.array().abs().maxCoeff() == Approx(0.0) );
 }
 
-TEST_CASE("Eigensolver of symmetric real matrix", "[eigs_sym]")
+void run_test_sets(const Matrix &A, int k, int m)
 {
-    srand(123);
-    Matrix A = Eigen::MatrixXd::Random(10, 10);
-
-    int k = 3;
-    int m = 6;
-
     SECTION( "Largest Magnitude" )
     {
         run_test<LARGEST_MAGN>(A, k, m);
@@ -75,4 +69,37 @@ TEST_CASE("Eigensolver of symmetric real matrix", "[eigs_sym]")
     {
         run_test<BOTH_ENDS>(A, k, m);
     }
+}
+
+TEST_CASE("Eigensolver of symmetric real matrix [10x10]", "[eigs_sym]")
+{
+    srand(123);
+
+    Matrix A = Eigen::MatrixXd::Random(10, 10);
+    int k = 3;
+    int m = 6;
+
+    run_test_sets(A, k, m);
+}
+
+TEST_CASE("Eigensolver of symmetric real matrix [100x100]", "[eigs_sym]")
+{
+    srand(123);
+
+    Matrix A = Eigen::MatrixXd::Random(100, 100);
+    int k = 10;
+    int m = 20;
+
+    run_test_sets(A, k, m);
+}
+
+TEST_CASE("Eigensolver of symmetric real matrix [1000x1000]", "[eigs_sym]")
+{
+    srand(123);
+
+    Matrix A = Eigen::MatrixXd::Random(1000, 1000);
+    int k = 20;
+    int m = 50;
+
+    run_test_sets(A, k, m);
 }

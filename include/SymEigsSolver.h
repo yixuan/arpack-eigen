@@ -1,5 +1,5 @@
-#ifndef SYMEIGSSOLVER_H
-#define SYMEIGSSOLVER_H
+#ifndef SYM_EIGS_SOLVER_H
+#define SYM_EIGS_SOLVER_H
 
 #include <Eigen/Dense>
 #include <vector>
@@ -8,12 +8,15 @@
 #include <utility>
 #include <stdexcept>
 
-#include "MatOp.h"
 #include "SelectionRule.h"
 #include "UpperHessenbergQR.h"
+#include "MatOp/DenseGenMatProd.h"
+#include "MatOp/DenseSymShiftSolve.h"
 
 
-template <typename Scalar = double, int SelectionRule = LARGEST_MAGN>
+template < typename Scalar = double,
+           int SelectionRule = LARGEST_MAGN,
+           typename OpType = DenseGenMatProd<double> >
 class SymEigsSolver
 {
 private:
@@ -26,8 +29,11 @@ private:
     typedef Eigen::SelfAdjointEigenSolver<Matrix> EigenSolver;
     typedef std::pair<Scalar, int> SortPair;
 
-    MatOp<Scalar> *op;   // object to conduct matrix operation,
+protected:
+    OpType *op;          // object to conduct matrix operation,
                          // e.g. matrix-vector product
+
+private:
     const int dim_n;     // dimension of matrix A
 
 protected:
@@ -54,12 +60,6 @@ private:
                          // epsilon is the machine precision,
                          // e.g. ~= 1e-16 for the "double" type
 
-    // Matrix product in this case, and shift solve for SymEigsShiftSolver
-    virtual void matrix_operation(Scalar *x_in, Scalar *y_out)
-    {
-        op->prod(x_in, y_out);
-    }
-
     // Arnoldi factorization starting from step-k
     void factorize_from(int from_k, int to_m, const Vector &fk)
     {
@@ -79,7 +79,7 @@ private:
             fac_V.col(i) = v; // The (i+1)-th column
             fac_H(i, i - 1) = beta;
 
-            matrix_operation(v.data(), w.data());
+            op->perform_op(v.data(), w.data());
             nmatop++;
 
             Hii = v.dot(w);
@@ -239,7 +239,7 @@ protected:
     }
 
 public:
-    SymEigsSolver(MatOp<Scalar> *op_, int nev_, int ncv_) :
+    SymEigsSolver(OpType *op_, int nev_, int ncv_) :
         op(op_),
         dim_n(op->rows()),
         nev(nev_),
@@ -284,7 +284,7 @@ public:
         v /= vnorm;
 
         Vector w(dim_n);
-        matrix_operation(v.data(), w.data());
+        op->perform_op(v.data(), w.data());
         nmatop++;
 
         fac_H(0, 0) = v.dot(w);
@@ -324,11 +324,11 @@ public:
         return std::min(nev, nconv);
     }
 
-    void info(int &iters, int &mat_ops)
-    {
-        iters = niter;
-        mat_ops = nmatop;
-    }
+    // Return the number of restarting iterations
+    int num_iterations() { return niter; }
+
+    // Return the number of matrix operations
+    int num_operations() { return nmatop; }
 
     // Return converged eigenvalues
     Vector eigenvalues()
@@ -382,20 +382,15 @@ public:
 
 
 
-template <typename Scalar = double, int SelectionRule = LARGEST_MAGN>
-class SymEigsShiftSolver: public SymEigsSolver<Scalar, SelectionRule>
+template <typename Scalar = double,
+          int SelectionRule = LARGEST_MAGN,
+          typename OpType = DenseSymShiftSolve<double> >
+class SymEigsShiftSolver: public SymEigsSolver<Scalar, SelectionRule, OpType>
 {
 private:
     typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> Array;
 
     Scalar sigma;
-    MatOpWithRealShiftSolve<Scalar> *op_shift;
-
-    // Shift solve in this case
-    void matrix_operation(Scalar *x_in, Scalar *y_out)
-    {
-        op_shift->shift_solve(x_in, y_out);
-    }
 
     // First transform back the ritz values, and then sort
     void sort_ritzpair()
@@ -405,14 +400,12 @@ private:
         SymEigsSolver<Scalar, SelectionRule>::sort_ritzpair();
     }
 public:
-    SymEigsShiftSolver(MatOpWithRealShiftSolve<Scalar> *op_,
-                       int nev_, int ncv_, Scalar sigma_) :
-        SymEigsSolver<Scalar, SelectionRule>(op_, nev_, ncv_),
-        sigma(sigma_),
-        op_shift(op_)
+    SymEigsShiftSolver(OpType *op_, int nev_, int ncv_, Scalar sigma_) :
+        SymEigsSolver<Scalar, SelectionRule, OpType>(op_, nev_, ncv_),
+        sigma(sigma_)
     {
-        op_shift->set_shift(sigma);
+        this->op->set_shift(sigma);
     }
 };
 
-#endif // SYMEIGSSOLVER_H
+#endif // SYM_EIGS_SOLVER_H
