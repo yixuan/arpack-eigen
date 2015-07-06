@@ -22,7 +22,7 @@ public:
         mat(mat_.data(), mat_.rows(), mat_.cols()),
         dim_n(mat_.rows())
     {
-        if(!mat_.is_square())
+        if(mat_.rows() != mat_.cols())
             throw std::invalid_argument("DenseSymShiftSolve: matrix must be square");
     }
 
