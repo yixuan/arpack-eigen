@@ -1,17 +1,18 @@
+#include <Eigen/Dense>
 #include <iostream>
-#include <SymEigsSolver.h>
-#include <MatOpDense.h>
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-int run_F77(MatrixXd &M, VectorXd &init_resid, int k, int m);
-int run_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m);
+int eigs_sym_F77(MatrixXd &M, VectorXd &init_resid, int k, int m);
+int eigs_gen_F77(MatrixXd &M, VectorXd &init_resid, int k, int m);
+int eigs_sym_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m);
+int eigs_gen_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m);
 
 int main()
 {
     srand(123);
-    MatrixXd A = MatrixXd::Random(1000, 1000);
+    MatrixXd A = MatrixXd::Random(100, 100);
     A.array() -= 0.5;
     MatrixXd M = A.transpose() * A;
 
@@ -22,20 +23,35 @@ int main()
     int m = 20;
 
     clock_t t1, t2;
+
     t1 = clock();
-
-    run_F77(M, init_resid, k, m);
-
+    eigs_sym_F77(M, init_resid, k, m);
     t2 = clock();
-    std::cout << "elapsed time for F77 version: "
+    std::cout << "elapsed time for eigs_sym_F77: "
               << double(t2 - t1) / CLOCKS_PER_SEC << " secs\n";
 
+
+
     t1 = clock();
-
-    run_Cpp(M, init_resid, k, m);
-
+    eigs_sym_Cpp(M, init_resid, k, m);
     t2 = clock();
-    std::cout << "elapsed time for C++ version: "
+    std::cout << "elapsed time for eigs_sym_Cpp: "
+              << double(t2 - t1) / CLOCKS_PER_SEC << " secs\n";
+
+
+
+    t1 = clock();
+    eigs_gen_F77(A, init_resid, k, m);
+    t2 = clock();
+    std::cout << "elapsed time for eigs_gen_F77: "
+              << double(t2 - t1) / CLOCKS_PER_SEC << " secs\n";
+
+
+
+    t1 = clock();
+    eigs_gen_Cpp(A, init_resid, k, m);
+    t2 = clock();
+    std::cout << "elapsed time for eigs_gen_Cpp: "
               << double(t2 - t1) / CLOCKS_PER_SEC << " secs\n";
 
     return 0;
