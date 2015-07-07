@@ -299,7 +299,7 @@ public:
     }
 
     // Initialization and clean-up
-    void init(Scalar *init_resid)
+    void init(const Scalar *init_resid)
     {
         // Reset all matrices/vectors to zero
         fac_V.resize(dim_n, ncv);
@@ -371,7 +371,7 @@ public:
     int num_operations() { return nmatop; }
 
     // Return converged eigenvalues
-    virtual ComplexVector eigenvalues()
+    ComplexVector eigenvalues()
     {
         int nconv = ritz_conv.cast<int>().sum();
         ComplexVector res(nconv);
@@ -393,7 +393,7 @@ public:
     }
 
     // Return converged eigenvectors
-    virtual ComplexMatrix eigenvectors()
+    ComplexMatrix eigenvectors()
     {
         int nconv = ritz_conv.cast<int>().sum();
         ComplexMatrix res(dim_n, nconv);

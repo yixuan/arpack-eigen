@@ -256,7 +256,7 @@ public:
     }
 
     // Initialization and clean-up
-    void init(Scalar *init_resid)
+    void init(const Scalar *init_resid)
     {
         // Reset all matrices/vectors to zero
         fac_V.resize(dim_n, ncv);
