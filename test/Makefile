@@ -9,12 +9,14 @@ HEADERS = $(wildcard ../include/MatOp/*.h) $(wildcard ../include/*.h)
 
 .PHONY: all test clean
 
-all: QR.out SymEigs.out SymEigsShift.out
+all: QR.out SymEigs.out SymEigsShift.out GenEigs.out GenEigsRealShift.out
 
 test:
 	-./QR.out
 	-./SymEigs.out
 	-./SymEigsShift.out
+	-./GenEigs.out
+	-./GenEigsRealShift.out
 
 %.out: %.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $< -o $@ $(LDFLAGS) $(LIBS)
