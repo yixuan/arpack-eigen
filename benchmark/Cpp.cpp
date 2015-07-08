@@ -51,5 +51,8 @@ int eigs_gen_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m)
     std::cout << "niter = " << niter << std::endl;
     std::cout << "nops = " << nops << std::endl;
 
+    // MatrixXcd err = M * evecs - evecs * evals.asDiagonal();
+    // std::cout << "||AU - UD||_inf = " << err.array().abs().maxCoeff() << std::endl;
+
     return 0;
 }
