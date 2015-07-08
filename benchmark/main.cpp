@@ -12,7 +12,7 @@ int eigs_gen_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m);
 int main()
 {
     srand(123);
-    MatrixXd A = MatrixXd::Random(100, 100);
+    MatrixXd A = MatrixXd::Random(1000, 1000);
     A.array() -= 0.5;
     MatrixXd M = A.transpose() * A;
 
@@ -20,7 +20,7 @@ int main()
     init_resid.array() -= 0.5;
 
     int k = 10;
-    int m = 20;
+    int m = 30;
 
     clock_t t1, t2;
 
