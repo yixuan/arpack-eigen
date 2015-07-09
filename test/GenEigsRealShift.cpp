@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include <GenEigsSolver.h>
-#include <MatOp/DenseGenShiftSolve.h>
+#include <MatOp/DenseGenRealShiftSolve.h>
 
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
@@ -15,8 +15,8 @@ typedef Eigen::VectorXcd ComplexVector;
 template <int SelectionRule>
 void run_test(Matrix &mat, int k, int m, double sigma)
 {
-    DenseGenShiftSolve<double> op(mat);
-    GenEigsRealShiftSolver<double, SelectionRule, DenseGenShiftSolve<double>> eigs(&op, k, m, sigma);
+    DenseGenRealShiftSolve<double> op(mat);
+    GenEigsRealShiftSolver<double, SelectionRule, DenseGenRealShiftSolve<double>> eigs(&op, k, m, sigma);
     eigs.init();
     int nconv = eigs.compute();
     int niter = eigs.num_iterations();

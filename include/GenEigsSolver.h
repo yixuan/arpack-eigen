@@ -12,7 +12,7 @@
 #include "SelectionRule.h"
 #include "UpperHessenbergQR.h"
 #include "MatOp/DenseGenMatProd.h"
-#include "MatOp/DenseGenShiftSolve.h"
+#include "MatOp/DenseGenRealShiftSolve.h"
 
 
 template < typename Scalar = double,
@@ -424,7 +424,7 @@ public:
 
 template <typename Scalar = double,
           int SelectionRule = LARGEST_MAGN,
-          typename OpType = DenseGenShiftSolve<double> >
+          typename OpType = DenseGenRealShiftSolve<double> >
 class GenEigsRealShiftSolver: public GenEigsSolver<Scalar, SelectionRule, OpType>
 {
 private:
