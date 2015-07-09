@@ -1,11 +1,11 @@
-#ifndef DENSE_GEN_SHIFT_SOLVE_H
-#define DENSE_GEN_SHIFT_SOLVE_H
+#ifndef DENSE_GEN_REAL_SHIFT_SOLVE_H
+#define DENSE_GEN_REAL_SHIFT_SOLVE_H
 
 #include <Eigen/Dense>
 #include <stdexcept>
 
 template <typename Scalar>
-class DenseGenShiftSolve
+class DenseGenRealShiftSolve
 {
 private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
@@ -18,7 +18,7 @@ private:
     Eigen::PartialPivLU<Matrix> solver;
 
 public:
-    DenseGenShiftSolve(const Matrix &mat_) :
+    DenseGenRealShiftSolve(const Matrix &mat_) :
         mat(mat_.data(), mat_.rows(), mat_.cols()),
         dim_n(mat_.rows())
     {
@@ -45,4 +45,4 @@ public:
 };
 
 
-#endif // DENSE_GEN_SHIFT_SOLVE_H
+#endif // DENSE_GEN_REAL_SHIFT_SOLVE_H
