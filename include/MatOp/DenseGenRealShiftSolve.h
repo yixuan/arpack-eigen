@@ -23,7 +23,7 @@ public:
         dim_n(mat_.rows())
     {
         if(mat_.rows() != mat_.cols())
-            throw std::invalid_argument("DenseGenShiftSolve: matrix must be square");
+            throw std::invalid_argument("DenseGenRealShiftSolve: matrix must be square");
     }
 
     int rows() { return dim_n; }
