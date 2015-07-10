@@ -13,6 +13,7 @@
 #include "UpperHessenbergQR.h"
 #include "MatOp/DenseGenMatProd.h"
 #include "MatOp/DenseGenRealShiftSolve.h"
+#include "MatOp/DenseGenComplexShiftSolve.h"
 
 
 template < typename Scalar = double,
@@ -446,6 +447,38 @@ public:
         sigma(sigma_)
     {
         this->op->set_shift(sigma);
+    }
+};
+
+
+
+
+
+template <typename Scalar = double,
+          int SelectionRule = LARGEST_MAGN,
+          typename OpType = DenseGenComplexShiftSolve<double> >
+class GenEigsComplexShiftSolver: public GenEigsSolver<Scalar, SelectionRule, OpType>
+{
+private:
+    typedef std::complex<Scalar> Complex;
+    typedef Eigen::Array<Complex, Eigen::Dynamic, 1> ComplexArray;
+
+    Scalar sigmar;
+    Scalar sigmai;
+
+    // First transform back the ritz values, and then sort
+    void sort_ritzpair()
+    {
+        // ComplexArray ritz_val_org = Scalar(1.0) / this->ritz_val.head(this->nev).array() + sigma;
+        // this->ritz_val.head(this->nev) = ritz_val_org;
+        GenEigsSolver<Scalar, SelectionRule, OpType>::sort_ritzpair();
+    }
+public:
+    GenEigsComplexShiftSolver(OpType *op_, int nev_, int ncv_, Scalar sigmar_, Scalar sigmai_) :
+        GenEigsSolver<Scalar, SelectionRule, OpType>(op_, nev_, ncv_),
+        sigmar(sigmar_), sigmai(sigmai_)
+    {
+        this->op->set_shift(sigmar, sigmai);
     }
 };
 
