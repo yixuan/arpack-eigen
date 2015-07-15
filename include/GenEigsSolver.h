@@ -289,11 +289,11 @@ public:
         niter(0),
         prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(2.0 / 3)))
     {
-        if(nev_ < 1 || nev_ >= dim_n)
-            throw std::invalid_argument("nev must be greater than zero and less than the size of the matrix");
+        if(nev_ < 1 || nev_ > dim_n - 2)
+            throw std::invalid_argument("nev must satisfy 1 <= nev <= n - 2, n is the size of matrix");
 
-        if(ncv_ <= nev_)
-            throw std::invalid_argument("ncv must be greater than nev");
+        if(ncv_ < nev_ + 2 || ncv_ > dim_n)
+            throw std::invalid_argument("ncv must satisfy nev + 2 <= ncv <= n, n is the size of matrix");
     }
 
     // Initialization and clean-up
