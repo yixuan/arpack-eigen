@@ -15,7 +15,37 @@ TODO
 
 ## Examples
 
-TODO
+Retrieving the largest (in magnitude) three eigenvalues and corresponding
+eigenvectors of a real symmetric matrix.
+
+```cpp
+#include <Eigen/Dense>
+#include <iostream>
+#include <SymEigsSolver.h>
+#include <MatOp/DenseGenMatProd.h>
+
+int main()
+{
+    srand(123);
+    Eigen::MatrixXd A = Eigen::MatrixXd::Random(10, 10);
+    Eigen::MatrixXd mat = A.transpose() + A;
+    int k = 3;
+    int m = 6;
+
+    DenseGenMatProd<double> op(mat);
+    SymEigsSolver<double, LARGEST_MAGN, DenseGenMatProd<double>> eigs(&op, k, m);
+    eigs.init();
+    eigs.compute();
+
+    Eigen::VectorXd evals = eigs.eigenvalues();
+    Eigen::MatrixXd evecs = eigs.eigenvectors();
+
+    std::cout << "Eigenvalues:\n" << evals << std::endl;
+    std::cout << "Eigenvectors:\n" << evecs << std::endl;
+
+    return 0;
+}
+```
 
 ## Advanced Usage
 
