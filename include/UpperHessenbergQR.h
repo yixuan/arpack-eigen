@@ -10,11 +10,13 @@ class UpperHessenbergQR
 {
 private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
-    typedef Eigen::Ref<Matrix> MatrixType;
     typedef Eigen::Matrix<Scalar, 2, 2> Matrix22;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
     typedef Eigen::Matrix<Scalar, 1, Eigen::Dynamic> RowVector;
     typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> Array;
+
+    typedef Eigen::Ref<Matrix> GenericMatrix;
+    typedef const Eigen::Ref<const Matrix> ConstGenericMatrix;
 
 protected:
     int n;
@@ -30,7 +32,7 @@ public:
         n(0), computed(false)
     {}
 
-    UpperHessenbergQR(const MatrixType &mat) :
+    UpperHessenbergQR(ConstGenericMatrix &mat) :
         n(mat.rows()),
         mat_T(n, n),
         rot_cos(n - 1),
@@ -40,7 +42,7 @@ public:
         compute(mat);
     }
 
-    virtual void compute(const MatrixType &mat)
+    virtual void compute(ConstGenericMatrix &mat)
     {
         n = mat.rows();
         mat_T.resize(n, n);
@@ -157,7 +159,7 @@ public:
     }
 
     // Y -> QY = G1 * G2 * ... * Y
-    void apply_QY(Matrix &Y)
+    void apply_QY(GenericMatrix Y)
     {
         if(!computed)
             throw std::logic_error("UpperHessenbergQR: need to call compute() first");
@@ -180,7 +182,7 @@ public:
     }
 
     // Y -> Q'Y = G_{n-1}' * ... * G2' * G1' * Y
-    void apply_QtY(Matrix &Y)
+    void apply_QtY(GenericMatrix Y)
     {
         if(!computed)
             throw std::logic_error("UpperHessenbergQR: need to call compute() first");
@@ -203,7 +205,7 @@ public:
     }
 
     // Y -> YQ = Y * G1 * G2 * ...
-    void apply_YQ(Matrix &Y)
+    void apply_YQ(GenericMatrix Y)
     {
         if(!computed)
             throw std::logic_error("UpperHessenbergQR: need to call compute() first");
@@ -225,7 +227,7 @@ public:
     }
 
     // Y -> YQ' = Y * G_{n-1}' * ... * G2' * G1'
-    void apply_YQt(Matrix &Y)
+    void apply_YQt(GenericMatrix Y)
     {
         if(!computed)
             throw std::logic_error("UpperHessenbergQR: need to call compute() first");
@@ -256,20 +258,20 @@ class TridiagQR: public UpperHessenbergQR<Scalar>
 {
 private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
-    typedef Eigen::Ref<Matrix> MatrixType;
+    typedef const Eigen::Ref<const Matrix> ConstGenericMatrix;
 
 public:
     TridiagQR() :
         UpperHessenbergQR<Scalar>()
     {}
 
-    TridiagQR(const MatrixType &mat) :
+    TridiagQR(ConstGenericMatrix &mat) :
         UpperHessenbergQR<Scalar>()
     {
         this->compute(mat);
     }
 
-    virtual void compute(const MatrixType &mat)
+    void compute(ConstGenericMatrix &mat)
     {
         this->n = mat.rows();
         this->mat_T.resize(this->n, this->n);
