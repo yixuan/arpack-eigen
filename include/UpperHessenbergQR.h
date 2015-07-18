@@ -1,7 +1,7 @@
 #ifndef UPPER_HESSENBERG_QR_H
 #define UPPER_HESSENBERG_QR_H
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
 #include <stdexcept>
 
 // QR decomposition of an upper Hessenberg matrix

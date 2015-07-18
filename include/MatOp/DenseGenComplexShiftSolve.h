@@ -1,7 +1,8 @@
 #ifndef DENSE_GEN_COMPLEX_SHIFT_SOLVE_H
 #define DENSE_GEN_COMPLEX_SHIFT_SOLVE_H
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/LU>
 #include <stdexcept>
 
 template <typename Scalar>

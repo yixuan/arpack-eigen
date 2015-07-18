@@ -1,7 +1,7 @@
 #ifndef DENSE_GEN_MAT_PROD_H
 #define DENSE_GEN_MAT_PROD_H
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
 
 template <typename Scalar>
 class DenseGenMatProd

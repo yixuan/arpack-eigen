@@ -1,7 +1,10 @@
 #ifndef GEN_EIGS_SOLVER_H
 #define GEN_EIGS_SOLVER_H
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/QR>
+#include <Eigen/Eigenvalues>
+
 #include <vector>
 #include <algorithm>
 #include <cmath>

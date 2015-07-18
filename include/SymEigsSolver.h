@@ -1,7 +1,9 @@
 #ifndef SYM_EIGS_SOLVER_H
 #define SYM_EIGS_SOLVER_H
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/Eigenvalues>
+
 #include <vector>
 #include <algorithm>
 #include <cmath>

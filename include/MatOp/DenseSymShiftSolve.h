@@ -1,7 +1,8 @@
 #ifndef DENSE_SYM_SHIFT_SOLVE_H
 #define DENSE_SYM_SHIFT_SOLVE_H
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/Cholesky>
 #include <stdexcept>
 
 template <typename Scalar>
