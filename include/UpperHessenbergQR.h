@@ -4,7 +4,12 @@
 #include <Eigen/Core>
 #include <stdexcept>
 
-// QR decomposition of an upper Hessenberg matrix
+///
+/// Perform the QR decomposition of an upper Hessenberg matrix.
+///
+/// \tparam Scalar The element type of the matrix.
+/// Currently supported types are `float`, `double` and `long double`.
+///
 template <typename Scalar = double>
 class UpperHessenbergQR
 {
@@ -28,10 +33,24 @@ protected:
     Array rot_sin;
     bool computed;
 public:
+    ///
+    /// Default constructor. Computation can
+    /// be performed later by calling the compute() method.
+    ///
     UpperHessenbergQR() :
         n(0), computed(false)
     {}
 
+    ///
+    /// Constructor to create an object that performs and stores the
+    /// QR decomposition of an upper Hessenberg matrix `mat`.
+    ///
+    /// \param mat Matrix type can be `Eigen::Matrix<Scalar, ...>` (e.g.
+    /// `Eigen::MatrixXd` and `Eigen::MatrixXf`), or its mapped version
+    /// (e.g. `Eigen::Map<Eigen::MatrixXd>`).
+    /// Only the upper triangular and the lower subdiagonal parts of
+    /// the matrix are used.
+    ///
     UpperHessenbergQR(ConstGenericMatrix &mat) :
         n(mat.rows()),
         mat_T(n, n),
@@ -42,6 +61,15 @@ public:
         compute(mat);
     }
 
+    ///
+    /// Conduct the QR factorization of an upper Hessenberg matrix.
+    ///
+    /// \param mat Matrix type can be `Eigen::Matrix<Scalar, ...>` (e.g.
+    /// `Eigen::MatrixXd` and `Eigen::MatrixXf`), or its mapped version
+    /// (e.g. `Eigen::Map<Eigen::MatrixXd>`).
+    /// Only the upper triangular and the lower subdiagonal parts of
+    /// the matrix are used.
+    ///
     virtual void compute(ConstGenericMatrix &mat)
     {
         n = mat.rows();
@@ -88,6 +116,13 @@ public:
         computed = true;
     }
 
+    ///
+    /// Return the \f$R\f$ matrix in the QR decomposition, which is an
+    /// upper triangular matrix.
+    ///
+    /// \return Returned matrix type will be `Eigen::Matrix<Scalar, ...>`, depending on
+    /// the template parameter `Scalar` defined.
+    ///
     Matrix matrix_R()
     {
         if(!computed)
@@ -96,7 +131,13 @@ public:
         return mat_T;
     }
 
-    // Calculate RQ, which will also be an upper Hessenberg matrix
+    ///
+    /// Return the \f$RQ\f$ matrix, the multiplication of \f$R\f$ and \f$Q\f$,
+    /// which is an upper Hessenberg matrix.
+    ///
+    /// \return Returned matrix type will be `Eigen::Matrix<Scalar, ...>`, depending on
+    /// the template parameter `Scalar` defined.
+    ///
     virtual Matrix matrix_RQ()
     {
         if(!computed)
@@ -122,6 +163,14 @@ public:
         return RQ;
     }
 
+    ///
+    /// Apply the \f$Q\f$ matrix to a vector \f$y\f$.
+    ///
+    /// \param Y A vector that will be overwritten by the matrix product \f$Qy\f$.
+    ///
+    /// Vector type can be `Eigen::Vector<Scalar, ...>`, depending on
+    /// the template parameter `Scalar` defined.
+    ///
     // Y -> QY = G1 * G2 * ... * Y
     void apply_QY(Vector &Y)
     {
@@ -140,6 +189,14 @@ public:
         }
     }
 
+    ///
+    /// Apply the \f$Q\f$ matrix to a vector \f$y\f$.
+    ///
+    /// \param Y A vector that will be overwritten by the matrix product \f$Q'y\f$.
+    ///
+    /// Vector type can be `Eigen::Vector<Scalar, ...>`, depending on
+    /// the template parameter `Scalar` defined.
+    ///
     // Y -> Q'Y = G_{n-1}' * ... * G2' * G1' * Y
     void apply_QtY(Vector &Y)
     {
@@ -158,6 +215,15 @@ public:
         }
     }
 
+    ///
+    /// Apply the \f$Q\f$ matrix to another matrix \f$Y\f$.
+    ///
+    /// \param Y A matrix that will be overwritten by the matrix product \f$QY\f$.
+    ///
+    /// Matrix type can be `Eigen::Matrix<Scalar, ...>` (e.g.
+    /// `Eigen::MatrixXd` and `Eigen::MatrixXf`), or its mapped version
+    /// (e.g. `Eigen::Map<Eigen::MatrixXd>`).
+    ///
     // Y -> QY = G1 * G2 * ... * Y
     void apply_QY(GenericMatrix Y)
     {
@@ -181,6 +247,15 @@ public:
         }
     }
 
+    ///
+    /// Apply the \f$Q\f$ matrix to another matrix \f$Y\f$.
+    ///
+    /// \param Y A matrix that will be overwritten by the matrix product \f$Q'Y\f$.
+    ///
+    /// Matrix type can be `Eigen::Matrix<Scalar, ...>` (e.g.
+    /// `Eigen::MatrixXd` and `Eigen::MatrixXf`), or its mapped version
+    /// (e.g. `Eigen::Map<Eigen::MatrixXd>`).
+    ///
     // Y -> Q'Y = G_{n-1}' * ... * G2' * G1' * Y
     void apply_QtY(GenericMatrix Y)
     {
@@ -204,6 +279,15 @@ public:
         }
     }
 
+    ///
+    /// Apply the \f$Q\f$ matrix to another matrix \f$Y\f$.
+    ///
+    /// \param Y A matrix that will be overwritten by the matrix product \f$YQ\f$.
+    ///
+    /// Matrix type can be `Eigen::Matrix<Scalar, ...>` (e.g.
+    /// `Eigen::MatrixXd` and `Eigen::MatrixXf`), or its mapped version
+    /// (e.g. `Eigen::Map<Eigen::MatrixXd>`).
+    ///
     // Y -> YQ = Y * G1 * G2 * ...
     void apply_YQ(GenericMatrix Y)
     {
@@ -226,6 +310,15 @@ public:
         }
     }
 
+    ///
+    /// Apply the \f$Q\f$ matrix to another matrix \f$Y\f$.
+    ///
+    /// \param Y A matrix that will be overwritten by the matrix product \f$YQ'\f$.
+    ///
+    /// Matrix type can be `Eigen::Matrix<Scalar, ...>` (e.g.
+    /// `Eigen::MatrixXd` and `Eigen::MatrixXf`), or its mapped version
+    /// (e.g. `Eigen::Map<Eigen::MatrixXd>`).
+    ///
     // Y -> YQ' = Y * G_{n-1}' * ... * G2' * G1'
     void apply_YQt(GenericMatrix Y)
     {
@@ -251,8 +344,13 @@ public:
 
 
 
-// QR decomposition of a tridiagonal matrix as a special case of
-// upper Hessenberg matrix
+///
+/// Perform the QR decomposition of a tridiagonal matrix, a special
+/// case of upper Hessenberg matrices.
+///
+/// \tparam Scalar The element type of the matrix.
+/// Currently supported types are `float`, `double` and `long double`.
+///
 template <typename Scalar = double>
 class TridiagQR: public UpperHessenbergQR<Scalar>
 {
@@ -261,16 +359,39 @@ private:
     typedef const Eigen::Ref<const Matrix> ConstGenericMatrix;
 
 public:
+    ///
+    /// Default constructor. Computation can
+    /// be performed later by calling the compute() method.
+    ///
     TridiagQR() :
         UpperHessenbergQR<Scalar>()
     {}
 
+    ///
+    /// Constructor to create an object that performs and stores the
+    /// QR decomposition of a tridiagonal matrix `mat`.
+    ///
+    /// \param mat Matrix type can be `Eigen::Matrix<Scalar, ...>` (e.g.
+    /// `Eigen::MatrixXd` and `Eigen::MatrixXf`), or its mapped version
+    /// (e.g. `Eigen::Map<Eigen::MatrixXd>`).
+    /// Only the major- and sub- diagonal parts of
+    /// the matrix are used.
+    ///
     TridiagQR(ConstGenericMatrix &mat) :
         UpperHessenbergQR<Scalar>()
     {
         this->compute(mat);
     }
 
+    ///
+    /// Conduct the QR factorization of a tridiagonal matrix.
+    ///
+    /// \param mat Matrix type can be `Eigen::Matrix<Scalar, ...>` (e.g.
+    /// `Eigen::MatrixXd` and `Eigen::MatrixXf`), or its mapped version
+    /// (e.g. `Eigen::Map<Eigen::MatrixXd>`).
+    /// Only the major- and sub- diagonal parts of
+    /// the matrix are used.
+    ///
     void compute(ConstGenericMatrix &mat)
     {
         this->n = mat.rows();
@@ -349,7 +470,13 @@ public:
         this->computed = true;
     }
 
-    // Calculate RQ, which will also be a tridiagonal matrix
+    ///
+    /// Return the \f$RQ\f$ matrix, the multiplication of \f$R\f$ and \f$Q\f$,
+    /// which is a tridiagonal matrix.
+    ///
+    /// \return Returned matrix type will be `Eigen::Matrix<Scalar, ...>`, depending on
+    /// the template parameter `Scalar` defined.
+    ///
     Matrix matrix_RQ()
     {
         if(!this->computed)
