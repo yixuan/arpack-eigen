@@ -10,6 +10,7 @@ class UpperHessenbergQR
 {
 private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
+    typedef Eigen::Ref<Matrix> MatrixType;
     typedef Eigen::Matrix<Scalar, 2, 2> Matrix22;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
     typedef Eigen::Matrix<Scalar, 1, Eigen::Dynamic> RowVector;
@@ -29,15 +30,7 @@ public:
         n(0), computed(false)
     {}
 
-    UpperHessenbergQR(int n_) :
-        n(n_),
-        mat_T(n, n),
-        rot_cos(n - 1),
-        rot_sin(n - 1),
-        computed(false)
-    {}
-
-    UpperHessenbergQR(const Matrix &mat) :
+    UpperHessenbergQR(const MatrixType &mat) :
         n(mat.rows()),
         mat_T(n, n),
         rot_cos(n - 1),
@@ -47,7 +40,7 @@ public:
         compute(mat);
     }
 
-    virtual void compute(const Matrix &mat)
+    virtual void compute(const MatrixType &mat)
     {
         n = mat.rows();
         mat_T.resize(n, n);
@@ -263,19 +256,20 @@ class TridiagQR: public UpperHessenbergQR<Scalar>
 {
 private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
+    typedef Eigen::Ref<Matrix> MatrixType;
 
 public:
     TridiagQR() :
         UpperHessenbergQR<Scalar>()
     {}
 
-    TridiagQR(const Matrix &mat) :
-        UpperHessenbergQR<Scalar>(mat.rows())
+    TridiagQR(const MatrixType &mat) :
+        UpperHessenbergQR<Scalar>()
     {
         this->compute(mat);
     }
 
-    virtual void compute(const Matrix &mat)
+    virtual void compute(const MatrixType &mat)
     {
         this->n = mat.rows();
         this->mat_T.resize(this->n, this->n);

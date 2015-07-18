@@ -6,9 +6,10 @@
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
+typedef Eigen::Map<Eigen::MatrixXd> MapMat;
 
-template <typename Solver>
-void run_test(MatrixXd &H)
+template <typename Solver, typename MatrixType>
+void run_test(MatrixType &H)
 {
     Solver decomp(H);
     int n = H.rows();
@@ -91,6 +92,9 @@ TEST_CASE("QR of upper Hessenberg matrix", "[QR]")
     H.diagonal(-1) = m.diagonal(-1);
 
     run_test< UpperHessenbergQR<double> >(H);
+
+    MapMat Hmap(H.data(), H.rows(), H.cols());
+    run_test< UpperHessenbergQR<double> >(Hmap);
 }
 
 TEST_CASE("QR of Tridiagonal matrix", "[QR]")
@@ -105,4 +109,7 @@ TEST_CASE("QR of Tridiagonal matrix", "[QR]")
     H.diagonal(1) = m.diagonal(-1);
 
     run_test< TridiagQR<double> >(H);
+
+    MapMat Hmap(H.data(), H.rows(), H.cols());
+    run_test< TridiagQR<double> >(Hmap);
 }
