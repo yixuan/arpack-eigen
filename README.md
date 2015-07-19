@@ -15,7 +15,12 @@ of a large square matrix (`A`). Usually `k` is much less than the size of matrix
 (`n`), so that only a few eigenvalues and eigenvectors are computed, which
 in general is more efficient than calculating the whole spectral decomposition.
 
-There are two major steps to use **ARPACK-Eigen** for calculating eigenvalues:
+Moreover, in the basic setting the underlying algorithm of **ARPACK-Eigen**
+(and also **ARPACK**) only requires matrix-vector multiplication `A` to calculate
+eigenvalues. Therefore, if `A * x` can be computed efficiently, which is the case
+when `A` is sparse, **ARPACK-Eigen** will be very powerful for large scale eigenvalue problems.
+
+There are two major steps to use the **ARPACK-Eigen** library:
 
 1. Define a class that could calculate the matrix-vector multiplication `A * x`
 where `x` is any given real-valued vector. If the matrix `A` is already stored as a
@@ -26,9 +31,8 @@ symmetric matrices, and `GenEigsSolver` for general matrices, set up the paramet
 and options, and call member functions of this object to compute and retrieve the
 eigenvalues and/or eigenvectors.
 
-## Examples
-
-Retrieving the largest (in magnitude) three eigenvalues and corresponding
+This can be better exaplained by the example below, which calculates the largest
+(in magnitude, or equivalently, absolute value) three eigenvalues and corresponding
 eigenvectors of a real symmetric matrix.
 
 ```cpp
@@ -45,13 +49,14 @@ int main()
     int k = 3;
     int m = 6;
 
-    DenseGenMatProd<double> op(mat);
-    SymEigsSolver< double, LARGEST_MAGN, DenseGenMatProd<double> > eigs(&op, k, m);
-    eigs.init();
-    eigs.compute();
+    DenseGenMatProd<double> op(mat);                          // [1]
+    SymEigsSolver< double, LARGEST_MAGN,
+                   DenseGenMatProd<double> > eigs(&op, k, m); // [2]
+    eigs.init();                                              // [3]
+    eigs.compute();                                           // [4]
 
-    Eigen::VectorXd evals = eigs.eigenvalues();
-    Eigen::MatrixXd evecs = eigs.eigenvectors();
+    Eigen::VectorXd evals = eigs.eigenvalues();               // [5]
+    Eigen::MatrixXd evecs = eigs.eigenvectors();              // [6]
 
     std::cout << "Eigenvalues:\n" << evals << std::endl;
     std::cout << "Eigenvectors:\n" << evecs << std::endl;
@@ -60,7 +65,17 @@ int main()
 }
 ```
 
-## Advanced Usage
+In this example we calculate the eigenvalues of a matrix that is stored as a
+**Eigen** matrix type, and Line [1] wraps this matrix by the
+`DenseGenMatprod<double>` class that has already been defined in **ARPACK-Eigen**.
+
+Line [2] constructs an instance of the eigen solver class `SymEigsSolver`, with
+the template parameter `LARGEST_MAGN` indicating that we need eigenvalues with
+largest magnitude.
+
+Line [3] to [6] are API function calls that do the actual computation.
+
+## Advanced Features
 
 TODO
 
