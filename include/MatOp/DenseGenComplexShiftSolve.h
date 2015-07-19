@@ -18,13 +18,15 @@ private:
     typedef Eigen::Matrix<Complex, Eigen::Dynamic, 1> ComplexVector;
     typedef Eigen::PartialPivLU<ComplexMatrix> ComplexSolver;
 
+    typedef const Eigen::Ref<const Matrix> ConstGenericMatrix;
+
     const MapMat mat;
     const int dim_n;
     ComplexSolver solver;
     ComplexVector x_cache;
 
 public:
-    DenseGenComplexShiftSolve(const Matrix &mat_) :
+    DenseGenComplexShiftSolve(ConstGenericMatrix &mat_) :
         mat(mat_.data(), mat_.rows(), mat_.cols()),
         dim_n(mat_.rows())
     {

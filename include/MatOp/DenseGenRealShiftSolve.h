@@ -14,12 +14,14 @@ private:
     typedef Eigen::Map<const Matrix> MapMat;
     typedef Eigen::Map< Eigen::Matrix<Scalar, Eigen::Dynamic, 1> > MapVec;
 
+    typedef const Eigen::Ref<const Matrix> ConstGenericMatrix;
+
     const MapMat mat;
     const int dim_n;
     Eigen::PartialPivLU<Matrix> solver;
 
 public:
-    DenseGenRealShiftSolve(const Matrix &mat_) :
+    DenseGenRealShiftSolve(ConstGenericMatrix &mat_) :
         mat(mat_.data(), mat_.rows(), mat_.cols()),
         dim_n(mat_.rows())
     {

@@ -12,15 +12,17 @@ private:
     typedef Eigen::Map<const Matrix> MapMat;
     typedef Eigen::Map< Eigen::Matrix<Scalar, Eigen::Dynamic, 1> > MapVec;
 
+    typedef const Eigen::Ref<const Matrix> ConstGenericMatrix;
+
     const MapMat mat;
 
 public:
-    DenseGenMatProd(const Matrix &mat_) :
+    DenseGenMatProd(ConstGenericMatrix &mat_) :
         mat(mat_.data(), mat_.rows(), mat_.cols())
     {}
 
     int rows() { return mat.rows(); }
-    int cols() { return mat.n_cols; }
+    int cols() { return mat.cols(); }
 
     // y_out = A * x_in
     void perform_op(Scalar *x_in, Scalar *y_out)
