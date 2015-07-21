@@ -5,6 +5,14 @@
 #include <Eigen/LU>
 #include <stdexcept>
 
+///
+/// \ingroup MatOp
+///
+/// This class defines the complex shift-solve operation on a general real matrix \f$A\f$,
+/// i.e., calculating \f$y=\mathrm{Re}\{(A-\sigma I)^{-1}x\}\f$ for any complex-valued
+/// \f$\sigma\f$ and real-valued vector \f$x\f$. It is mainly used in the
+/// GenEigsComplexShiftSolver eigen solver.
+///
 template <typename Scalar>
 class DenseGenComplexShiftSolve
 {
@@ -26,6 +34,14 @@ private:
     ComplexVector x_cache;
 
 public:
+    ///
+    /// Constructor to create the matrix operation object.
+    ///
+    /// \param mat_ An **Eigen** matrix object, whose type can be
+    /// `Eigen::Matrix<Scalar, ...>` (e.g. `Eigen::MatrixXd` and
+    /// `Eigen::MatrixXf`), or its mapped version
+    /// (e.g. `Eigen::Map<Eigen::MatrixXd>`).
+    ///
     DenseGenComplexShiftSolve(ConstGenericMatrix &mat_) :
         mat(mat_.data(), mat_.rows(), mat_.cols()),
         dim_n(mat_.rows())
@@ -34,10 +50,21 @@ public:
             throw std::invalid_argument("DenseGenComplexShiftSolve: matrix must be square");
     }
 
+    ///
+    /// Return the number of rows of the underlying matrix.
+    ///
     int rows() { return dim_n; }
+    ///
+    /// Return the number of columns of the underlying matrix.
+    ///
     int cols() { return dim_n; }
 
-    // setting complex sigma
+    ///
+    /// Set the complex shift \f$\sigma\f$.
+    ///
+    /// \param sigmar Real part of \f$\sigma\f$.
+    /// \param sigmai Imaginary part of \f$\sigma\f$.
+    ///
     void set_shift(Scalar sigmar, Scalar sigmai)
     {
         ComplexMatrix cmat = mat.template cast<Complex>();
@@ -47,6 +74,13 @@ public:
         x_cache.setZero();
     }
 
+    ///
+    /// Perform the complex shift-solve operation
+    /// \f$y=\mathrm{Re}\{(A-\sigma I)^{-1}x\}\f$.
+    ///
+    /// \param x_in  Pointer to the \f$x\f$ vector.
+    /// \param y_out Pointer to the \f$y\f$ vector.
+    ///
     // y_out = Re( inv(A - sigma * I) * x_in )
     void perform_op(Scalar *x_in, Scalar *y_out)
     {

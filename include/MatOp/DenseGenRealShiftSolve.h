@@ -5,6 +5,13 @@
 #include <Eigen/LU>
 #include <stdexcept>
 
+///
+/// \ingroup MatOp
+///
+/// This class defines the shift-solve operation on a general real matrix \f$A\f$,
+/// i.e., calculating \f$y=(A-\sigma I)^{-1}x\f$ for any real \f$\sigma\f$ and
+/// vector \f$x\f$. It is mainly used in the GenEigsRealShiftSolver eigen solver.
+///
 template <typename Scalar>
 class DenseGenRealShiftSolve
 {
@@ -21,6 +28,14 @@ private:
     Eigen::PartialPivLU<Matrix> solver;
 
 public:
+    ///
+    /// Constructor to create the matrix operation object.
+    ///
+    /// \param mat_ An **Eigen** matrix object, whose type can be
+    /// `Eigen::Matrix<Scalar, ...>` (e.g. `Eigen::MatrixXd` and
+    /// `Eigen::MatrixXf`), or its mapped version
+    /// (e.g. `Eigen::Map<Eigen::MatrixXd>`).
+    ///
     DenseGenRealShiftSolve(ConstGenericMatrix &mat_) :
         mat(mat_.data(), mat_.rows(), mat_.cols()),
         dim_n(mat_.rows())
@@ -29,15 +44,29 @@ public:
             throw std::invalid_argument("DenseGenRealShiftSolve: matrix must be square");
     }
 
+    ///
+    /// Return the number of rows of the underlying matrix.
+    ///
     int rows() { return dim_n; }
+    ///
+    /// Return the number of columns of the underlying matrix.
+    ///
     int cols() { return dim_n; }
 
-    // setting real sigma
+    ///
+    /// Set the real shift \f$\sigma\f$.
+    ///
     void set_shift(Scalar sigma)
     {
         solver.compute(mat - sigma * Matrix::Identity(dim_n, dim_n));
     }
 
+    ///
+    /// Perform the shift-solve operation \f$y=(A-\sigma I)^{-1}x\f$.
+    ///
+    /// \param x_in  Pointer to the \f$x\f$ vector.
+    /// \param y_out Pointer to the \f$y\f$ vector.
+    ///
     // y_out = inv(A - sigma * I) * x_in
     void perform_op(Scalar *x_in, Scalar *y_out)
     {
