@@ -19,6 +19,61 @@
 #include "MatOp/DenseGenComplexShiftSolve.h"
 
 
+///
+/// \ingroup EigenSolver
+///
+/// This class implements the eigen solver for general real matrices.
+///
+/// Most of the background information documented in the SymEigsSolver class
+/// also applies to the GenEigsSolver class here, except that the eigenvalues
+/// and eigenvectors of a general matrix can now be complex-valued.
+///
+/// \tparam Scalar        The element type of the matrix.
+///                       Currently supported types are `float`, `double` and `long double`.
+/// \tparam SelectionRule An enumeration value indicating the selection rule of
+///                       the requested eigenvalues, for example `LARGEST_MAGN`
+///                       to retrieve eigenvalues with the largest magnitude.
+///                       The full list of enumeration values can be found in
+///                       SelectionRule.h .
+/// \tparam OpType        The name of the matrix operation class. Users could either
+///                       use the DenseGenMatProd wrapper class, or define their
+///                       own that impelemnts all the public member functions as in
+///                       DenseGenMatProd.
+///
+/// An example that illustrates the usage of GenEigsSolver is give below:
+///
+/// \code{.cpp}
+/// #include <Eigen/Core>
+/// #include <GenEigsSolver.h>  // Also includes <MatOp/DenseGenMatProd.h>
+/// #include <iostream>
+///
+/// int main()
+/// {
+///     // We are going to calculate the eigenvalues of M
+///     Eigen::MatrixXd M = Eigen::MatrixXd::Random(10, 10);
+///
+///     // Construct matrix operation object using the wrapper class
+///     DenseGenMatProd<double> op(M);
+///
+///     // Construct eigen solver object, requesting the largest
+///     // (in magnitude, or norm) three eigenvalues
+///     GenEigsSolver< double, LARGEST_MAGN, DenseGenMatProd<double> > eigs(&op, 3, 6);
+///
+///     // Initialize and compute
+///     eigs.init();
+///     int nconv = eigs.compute();
+///
+///     // Retrieve results
+///     Eigen::VectorXcd evalues;
+///     if(nconv > 0)
+///         evalues = eigs.eigenvalues();
+///
+///     std::cout << "Eigenvalues found:\n" << evalues << std::endl;
+///
+///     return 0;
+/// }
+/// \endcode
+///
 template < typename Scalar = double,
            int SelectionRule = LARGEST_MAGN,
            typename OpType = DenseGenMatProd<double> >
@@ -283,6 +338,23 @@ protected:
     }
 
 public:
+    ///
+    /// Constructor to create a solver object.
+    ///
+    /// \param op_  Pointer to the matrix operation object, which should implement
+    ///             the matrix-vector multiplication operation of \f$A\f$:
+    ///             calculating \f$Ay\f$ for any vector \f$y\f$. Users could either
+    ///             create the object from the DenseGenMatProd wrapper class, or
+    ///             define their own that impelemnts all the public member functions
+    ///             as in DenseGenMatProd.
+    /// \param nev_ Number of eigenvalues requested. This should satisfy \f$1\le nev \le n-2\f$,
+    ///             where \f$n\f$ is the size of matrix.
+    /// \param ncv_ Parameter that controls the convergence speed of the algorithm.
+    ///             Typically a larger `ncv_` means faster convergence, but it may
+    ///             also result in greater memory use and more matrix operations
+    ///             in each iteration. This parameter must satisfy \f$nev+2 \le ncv \le n\f$,
+    ///             and is advised to take \f$ncv \ge 2\cdot nev + 1\f$.
+    ///
     GenEigsSolver(OpType *op_, int nev_, int ncv_) :
         op(op_),
         dim_n(op->rows()),
@@ -299,7 +371,15 @@ public:
             throw std::invalid_argument("ncv must satisfy nev + 2 <= ncv <= n, n is the size of matrix");
     }
 
-    // Initialization and clean-up
+    ///
+    /// Providing the initial residual vector for the algorithm.
+    ///
+    /// \param init_resid Pointer to the initial residual vector.
+    ///
+    /// **ARPACK-Eigen** (and also **ARPACK**) uses an iterative algorithm
+    /// to find eigenvalues. This function allows the user to provide the initial
+    /// residual vector.
+    ///
     void init(const Scalar *init_resid)
     {
         // Reset all matrices/vectors to zero
@@ -332,7 +412,14 @@ public:
         fac_f = w - v * fac_H(0, 0);
         fac_V.col(0) = v;
     }
-    // Initialization with random initial coefficients
+
+    ///
+    /// Providing a random initial residual vector.
+    ///
+    /// This overloaded function generates a random initial residual vector
+    /// for the algorithm. Elements in the vector follow independent Uniform(-0.5, 0.5)
+    /// distributions.
+    ///
     void init()
     {
         Vector init_resid = Vector::Random(dim_n);
@@ -340,7 +427,14 @@ public:
         init(init_resid.data());
     }
 
-    // Compute Ritz pairs and return the number of iteration
+    ///
+    /// Conducting the major computation procedure.
+    ///
+    /// \param maxit Maximum number of iterations allowed in the algorithm.
+    /// \param tol Precision parameter for the calculated eigenvalues.
+    ///
+    /// \return Number of converged eigenvalues.
+    ///
     int compute(int maxit = 1000, Scalar tol = 1e-10)
     {
         // The m-step Arnoldi factorization
@@ -365,13 +459,23 @@ public:
         return std::min(nev, nconv);
     }
 
-    // Return the number of restarting iterations
+    ///
+    /// Returning the number of iterations used in the computation.
+    ///
     int num_iterations() { return niter; }
 
-    // Return the number of matrix operations
+    ///
+    /// Returning the number of matrix operations used in the computation.
+    ///
     int num_operations() { return nmatop; }
 
-    // Return converged eigenvalues
+    ///
+    /// Returning the converged eigenvalues.
+    ///
+    /// \return A complex-valued vector containing the eigenvalues.
+    /// Returned vector type will be `Eigen::Vector<std::complex<Scalar>, ...>`, depending on
+    /// the template parameter `Scalar` defined.
+    ///
     ComplexVector eigenvalues()
     {
         int nconv = ritz_conv.cast<int>().sum();
@@ -393,7 +497,13 @@ public:
         return res;
     }
 
-    // Return converged eigenvectors
+    ///
+    /// Returning the eigenvectors associated with the converged eigenvalues.
+    ///
+    /// \return A complex-valued matrix containing the eigenvectors.
+    /// Returned matrix type will be `Eigen::Matrix<std::complex<Scalar>, ...>`,
+    /// depending on the template parameter `Scalar` defined.
+    ///
     ComplexMatrix eigenvectors()
     {
         int nconv = ritz_conv.cast<int>().sum();
@@ -423,6 +533,25 @@ public:
 
 
 
+///
+/// \ingroup EigenSolver
+///
+/// This class implements the eigen solver for general real matrices with
+/// a real shift value in the **shift-and-invert mode**. The background
+/// knowledge of the shift-and-invert mode can be found in the documentation
+/// of the SymEigsShiftSolver class.
+///
+/// \tparam Scalar        The element type of the matrix.
+///                       Currently supported types are `float`, `double` and `long double`.
+/// \tparam SelectionRule An enumeration value indicating the selection rule of
+///                       the shifted-and-inverted eigenvalues.
+///                       The full list of enumeration values can be found in
+///                       SelectionRule.h .
+/// \tparam OpType        The name of the matrix operation class. Users could either
+///                       use the DenseGenRealShiftSolve wrapper class, or define their
+///                       own that impelemnts all the public member functions as in
+///                       DenseGenRealShiftSolve.
+///
 template <typename Scalar = double,
           int SelectionRule = LARGEST_MAGN,
           typename OpType = DenseGenRealShiftSolve<double> >
@@ -444,6 +573,24 @@ private:
         GenEigsSolver<Scalar, SelectionRule, OpType>::sort_ritzpair();
     }
 public:
+    ///
+    /// Constructor to create a eigen solver object using the shift-and-invert mode.
+    ///
+    /// \param op_    Pointer to the matrix operation object. This class should implement
+    ///               the shift-solve operation of \f$A\f$: calculating
+    ///               \f$(A-\sigma I)^{-1}y\f$ for any vector \f$y\f$. Users could either
+    ///               create the object from the DenseGenRealShiftSolve wrapper class, or
+    ///               define their own that impelemnts all the public member functions
+    ///               as in DenseGenRealShiftSolve.
+    /// \param nev_   Number of eigenvalues requested. This should satisfy \f$1\le nev \le n-2\f$,
+    ///               where \f$n\f$ is the size of matrix.
+    /// \param ncv_   Parameter that controls the convergence speed of the algorithm.
+    ///               Typically a larger `ncv_` means faster convergence, but it may
+    ///               also result in greater memory use and more matrix operations
+    ///               in each iteration. This parameter must satisfy \f$nev+2 \le ncv \le n\f$,
+    ///               and is advised to take \f$ncv \ge 2\cdot nev + 1\f$.
+    /// \param sigma_ The real-valued shift.
+    ///
     GenEigsRealShiftSolver(OpType *op_, int nev_, int ncv_, Scalar sigma_) :
         GenEigsSolver<Scalar, SelectionRule, OpType>(op_, nev_, ncv_),
         sigma(sigma_)
@@ -456,6 +603,25 @@ public:
 
 
 
+///
+/// \ingroup EigenSolver
+///
+/// This class implements the eigen solver for general real matrices with
+/// a complex shift value in the **shift-and-invert mode**. The background
+/// knowledge of the shift-and-invert mode can be found in the documentation
+/// of the SymEigsShiftSolver class.
+///
+/// \tparam Scalar        The element type of the matrix.
+///                       Currently supported types are `float`, `double` and `long double`.
+/// \tparam SelectionRule An enumeration value indicating the selection rule of
+///                       the shifted-and-inverted eigenvalues.
+///                       The full list of enumeration values can be found in
+///                       SelectionRule.h .
+/// \tparam OpType        The name of the matrix operation class. Users could either
+///                       use the DenseGenComplexShiftSolve wrapper class, or define their
+///                       own that impelemnts all the public member functions as in
+///                       DenseGenComplexShiftSolve.
+///
 template <typename Scalar = double,
           int SelectionRule = LARGEST_MAGN,
           typename OpType = DenseGenComplexShiftSolve<double> >
@@ -514,6 +680,25 @@ private:
         GenEigsSolver<Scalar, SelectionRule, OpType>::sort_ritzpair();
     }
 public:
+    ///
+    /// Constructor to create a eigen solver object using the shift-and-invert mode.
+    ///
+    /// \param op_     Pointer to the matrix operation object. This class should implement
+    ///                the complex shift-solve operation of \f$A\f$: calculating
+    ///                \f$\mathrm{Re}\{(A-\sigma I)^{-1}y\}\f$ for any vector \f$y\f$. Users could either
+    ///                create the object from the DenseGenComplexShiftSolve wrapper class, or
+    ///                define their own that impelemnts all the public member functions
+    ///                as in DenseGenComplexShiftSolve.
+    /// \param nev_    Number of eigenvalues requested. This should satisfy \f$1\le nev \le n-2\f$,
+    ///                where \f$n\f$ is the size of matrix.
+    /// \param ncv_    Parameter that controls the convergence speed of the algorithm.
+    ///                Typically a larger `ncv_` means faster convergence, but it may
+    ///                also result in greater memory use and more matrix operations
+    ///                in each iteration. This parameter must satisfy \f$nev+2 \le ncv \le n\f$,
+    ///                and is advised to take \f$ncv \ge 2\cdot nev + 1\f$.
+    /// \param sigmar_ The real part of the shift.
+    /// \param sigmai_ The imaginary part of the shift.
+    ///
     GenEigsComplexShiftSolver(OpType *op_, int nev_, int ncv_, Scalar sigmar_, Scalar sigmai_) :
         GenEigsSolver<Scalar, SelectionRule, OpType>(op_, nev_, ncv_),
         sigmar(sigmar_), sigmai(sigmai_)
