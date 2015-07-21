@@ -5,6 +5,13 @@
 #include <stdexcept>
 
 ///
+/// \defgroup LinearAlgebra Linear Algebra
+///
+/// A number of classes for linear algebra operations.
+
+///
+/// \ingroup LinearAlgebra
+///
 /// Perform the QR decomposition of an upper Hessenberg matrix.
 ///
 /// \tparam Scalar The element type of the matrix.
