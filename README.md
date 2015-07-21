@@ -14,70 +14,137 @@ C++ projects that require solving large scale eigenvalue problems.
 of a large square matrix (`A`). Usually `k` is much less than the size of matrix
 (`n`), so that only a few eigenvalues and eigenvectors are computed, which
 in general is more efficient than calculating the whole spectral decomposition.
+Users can choose eigenvalue selection rules to pick up the eigenvalues of interest,
+such as the largest `k` eigenvalues, or eigenvalues with largest real parts,
+etc.
 
-Moreover, in the basic setting the underlying algorithm of **ARPACK-Eigen**
-(and also **ARPACK**) only requires matrix-vector multiplication `A` to calculate
-eigenvalues. Therefore, if `A * x` can be computed efficiently, which is the case
-when `A` is sparse, **ARPACK-Eigen** will be very powerful for large scale eigenvalue problems.
+To use the eigen solvers in this library, the user does not need to directly
+provide the whole matrix, but instead, the algorithm only requires certain operations
+defined on `A`, and in the basic setting, it is simply the matrix-vector
+multiplication. Therefore, if the matrix-vector product `A * x` can be computed
+efficiently, which is the case when `A` is sparse, **ARPACK-Armadillo**
+will be very powerful for large scale eigenvalue problems.
 
 There are two major steps to use the **ARPACK-Eigen** library:
 
-1. Define a class that could calculate the matrix-vector multiplication `A * x`
-where `x` is any given real-valued vector. If the matrix `A` is already stored as a
-matrix in **Eigen**, this step can be easily done by using the built-in classes
-defined in **ARPACK-Eigen** which are simple wrappers of existing **Eigen** matrices.
-2. Create an object of the eigen solver class, for example `SymEigsSolver` for
-symmetric matrices, and `GenEigsSolver` for general matrices, set up the parameters
-and options, and call member functions of this object to compute and retrieve the
+1. Define a class that implements a certain matrix operation, for example the
+matrix-vector multiplication `y = A * x` or the shift-solve operation
+`y = inv(A - σ * I) * x`. **ARPACK-Eigen** has defined a number of
+helper classes to quickly create such operations from a matrix object.
+See the documentation of
+[DenseGenMatProd](http://yixuan.cos.name/arpack-eigen/doc/classDenseGenMatProd.html),
+[DenseSymShiftSolve](http://yixuan.cos.name/arpack-eigen/doc/classDenseSymShiftSolve.html), etc.
+2. Create an object of one of the eigen solver classes, for example
+[SymEigsSolver](http://yixuan.cos.name/arpack-eigen/doc/classSymEigsSolver.html)
+for symmetric matrices, and
+[GenEigsSolver](http://yixuan.cos.name/arpack-eigen/doc/classGenEigsSolver.html)
+for general matrices. Member functions
+of this object can then be called to conduct the computation and retrieve the
 eigenvalues and/or eigenvectors.
 
-This can be better exaplained by the example below, which calculates the largest
-(in magnitude, or equivalently, absolute value) three eigenvalues and corresponding
-eigenvectors of a real symmetric matrix.
+Below is a list of the available eigen solvers in **ARPACK-Eigen**:
+- [SymEigsSolver](http://yixuan.cos.name/arpack-eigen/doc/classSymEigsSolver.html):
+for real symmetric matrices
+- [GenEigsSolver](http://yixuan.cos.name/arpack-eigen/doc/classGenEigsSolver.html):
+for general real matrices
+- [SymEigsShiftSolver](http://yixuan.cos.name/arpack-eigen/doc/classSymEigsShiftSolver.html):
+for real symmetric matrices using the shift-and-invert mode
+- [GenEigsRealShiftSolver](http://yixuan.cos.name/arpack-eigen/doc/classGenEigsRealShiftSolver.html):
+for general real matrices using the shift-and-invert mode,
+with a real-valued shift
+
+## Examples
+
+Below is an example that demonstrates the use of the eigen solver for symmetric
+matrices.
 
 ```cpp
 #include <Eigen/Core>
+#include <SymEigsSolver.h>  // Also includes <MatOp/DenseGenMatProd.h>
 #include <iostream>
-#include <SymEigsSolver.h>
-#include <MatOp/DenseGenMatProd.h>
 
 int main()
 {
-    srand(123);
+    // We are going to calculate the eigenvalues of M
     Eigen::MatrixXd A = Eigen::MatrixXd::Random(10, 10);
-    Eigen::MatrixXd mat = A.transpose() + A;
-    int k = 3;
-    int m = 6;
+    Eigen::MatrixXd M = A + A.transpose();
 
-    DenseGenMatProd<double> op(mat);                          // [1]
-    SymEigsSolver< double, LARGEST_MAGN,
-                   DenseGenMatProd<double> > eigs(&op, k, m); // [2]
-    eigs.init();                                              // [3]
-    eigs.compute();                                           // [4]
+    // Construct matrix operation object using the wrapper class DenseGenMatProd
+    DenseGenMatProd<double> op(M);
 
-    Eigen::VectorXd evals = eigs.eigenvalues();               // [5]
-    Eigen::MatrixXd evecs = eigs.eigenvectors();              // [6]
+    // Construct eigen solver object, requesting the largest three eigenvalues
+    SymEigsSolver< double, LARGEST_ALGE, DenseGenMatProd<double> > eigs(&op, 3, 6);
 
-    std::cout << "Eigenvalues:\n" << evals << std::endl;
-    std::cout << "Eigenvectors:\n" << evecs << std::endl;
+    // Initialize and compute
+    eigs.init();
+    int nconv = eigs.compute();
+
+    // Retrieve results
+    Eigen::VectorXd evalues;
+    if(nconv > 0)
+        evalues = eigs.eigenvalues();
+
+    std::cout << "Eigenvalues found:\n" << evalues << std::endl;
 
     return 0;
 }
 ```
 
-In this example we calculate the eigenvalues of a matrix that is stored as a
-**Eigen** matrix type, and Line [1] wraps this matrix by the
-`DenseGenMatprod<double>` class that has already been defined in **ARPACK-Eigen**.
+And here is an example for user-supplied matrix operation class.
 
-Line [2] constructs an instance of the eigen solver class `SymEigsSolver`, with
-the template parameter `LARGEST_MAGN` indicating that we need eigenvalues with
-largest magnitude.
+```cpp
+#include <Eigen/Core>
+#include <SymEigsSolver.h>
+#include <iostream>
 
-Line [3] to [6] are API function calls that do the actual computation.
+// M = diag(1, 2, ..., 10)
+class MyDiagonalTen
+{
+public:
+    int rows() { return 10; }
+    int cols() { return 10; }
+    // y_out = M * x_in
+    void perform_op(double *x_in, double *y_out)
+    {
+        for(int i = 0; i < rows(); i++)
+        {
+            y_out[i] = x_in[i] * (i + 1);
+        }
+    }
+};
 
-## Advanced Features
+int main()
+{
+    MyDiagonalTen op;
+    SymEigsSolver<double, LARGEST_ALGE, MyDiagonalTen> eigs(&op, 3, 6);
+    eigs.init();
+    eigs.compute();
+    Eigen::VectorXd evalues = eigs.eigenvalues();
+    std::cout << "Eigenvalues found:\n" << evalues << std::endl;
 
-TODO
+    return 0;
+}
+```
+
+## Shift-and-invert Mode
+
+When we want to find eigenvalues that are closest to a number `σ`,
+for example to find the smallest eigenvalues of a positive definite matrix
+(in which case `σ = 0`), it is advised to use the shift-and-invert mode
+of eigen solvers.
+
+In the shift-and-invert mode, selection rules are applied to `1/(λ - σ)`
+rather than `λ`, where `λ` are eigenvalues of `A`.
+To use this mode, users need to define the shift-solve matrix operation. See
+the documentation of
+[SymEigsShiftSolver](http://yixuan.cos.name/arpack-eigen/doc/classSymEigsShiftSolver.html)
+for details.
+
+## Documentation
+
+[This page](http://yixuan.cos.name/arpack-eigen/doc/) contains the documentation
+of **ARPACK-Eigen** generated by [Doxygen](http://www.doxygen.org/),
+including all the background knowledge, example code and class APIs.
 
 ## License
 
