@@ -1,5 +1,8 @@
-// Test ../include/UpperHessenbergQR.h
+// Test ../include/UpperHessenbergQR.h and ../include/DoubleShiftQR.h
+#include <Eigen/Core>
+#include <Eigen/QR>
 #include <UpperHessenbergQR.h>
+#include <DoubleShiftQR.h>
 
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
@@ -112,4 +115,29 @@ TEST_CASE("QR of Tridiagonal matrix", "[QR]")
 
     MapMat Hmap(H.data(), H.rows(), H.cols());
     run_test< TridiagQR<double> >(Hmap);
+}
+
+TEST_CASE("QR decomposition with double shifts", "QR")
+{
+    srand(123);
+    int n = 100;
+    MatrixXd m = MatrixXd::Random(n, n);
+    m.array() -= 0.5;
+    MatrixXd H = m.triangularView<Eigen::Upper>();
+    H.diagonal(-1) = m.diagonal(-1);
+
+    double s = 2, t = 3;
+
+    MatrixXd M = H * H - s * H + t * MatrixXd::Identity(n, n);
+    Eigen::HouseholderQR<MatrixXd> qr(M);
+    Eigen::HouseholderSequence<MatrixXd, VectorXd> Q = qr.householderQ();
+    MatrixXd H0 = H;
+    H0.applyOnTheRight(Q);
+    H0.applyOnTheLeft(Q.adjoint());
+
+    DoubleShiftQR<double> decomp(H, s, t);
+    MatrixXd QtHQ = decomp.matrix_QtHQ();
+
+    INFO( "max error of QtHQ = " << (H0 - QtHQ).cwiseAbs().maxCoeff() );
+    REQUIRE( (H0 - QtHQ).cwiseAbs().maxCoeff() == Approx(0.0) );
 }
