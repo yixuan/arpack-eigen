@@ -126,18 +126,33 @@ TEST_CASE("QR decomposition with double shifts", "QR")
     MatrixXd H = m.triangularView<Eigen::Upper>();
     H.diagonal(-1) = m.diagonal(-1);
 
+    VectorXd Qty = VectorXd::Random(n);
+    MatrixXd YQ = MatrixXd::Random(n / 2, n);
+
     double s = 2, t = 3;
 
     MatrixXd M = H * H - s * H + t * MatrixXd::Identity(n, n);
     Eigen::HouseholderQR<MatrixXd> qr(M);
     Eigen::HouseholderSequence<MatrixXd, VectorXd> Q = qr.householderQ();
     MatrixXd H0 = H;
+    VectorXd v0 = Qty;
+    MatrixXd Y0 = YQ;
     H0.applyOnTheRight(Q);
     H0.applyOnTheLeft(Q.adjoint());
+    v0.applyOnTheLeft(Q.adjoint());
+    Y0.applyOnTheRight(Q);
 
     DoubleShiftQR<double> decomp(H, s, t);
     MatrixXd QtHQ = decomp.matrix_QtHQ();
+    decomp.apply_QtY(Qty);
+    decomp.apply_YQ(YQ);
 
     INFO( "max error of QtHQ = " << (H0 - QtHQ).cwiseAbs().maxCoeff() );
     REQUIRE( (H0 - QtHQ).cwiseAbs().maxCoeff() == Approx(0.0) );
+
+    INFO( "max error of Qty = " << (v0 - Qty).cwiseAbs().maxCoeff() );
+    REQUIRE( (v0 - Qty).cwiseAbs().maxCoeff() == Approx(0.0) );
+
+    INFO( "max error of YQ = " << (Y0 - YQ).cwiseAbs().maxCoeff() );
+    REQUIRE( (Y0 - YQ).cwiseAbs().maxCoeff() == Approx(0.0) );
 }

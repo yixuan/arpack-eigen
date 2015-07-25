@@ -58,6 +58,18 @@ private:
         }
     }
 
+    // x is a pointer to a vector
+    // Px = x - 2 * dot(x, u) * u
+    void apply_PX(Scalar *x, int u_ind)
+    {
+        Scalar *u = &ref_u(0, u_ind);
+        Scalar dot = x[0] * u[0] + x[1] * u[1] + ((u_ind == n - 2) ? 0 : (x[2] * u[2]));
+        x[0] -= 2 * dot * u[0];
+        x[1] -= 2 * dot * u[1];
+        if(u_ind < n - 2)
+            x[2] -= 2 * dot * u[2];
+    }
+
     void apply_XP(GenericMatrix X, int u_ind)
     {
         if(u_ind == n - 2)
@@ -71,6 +83,7 @@ private:
             X -= (X * (2 * u)) * u.transpose();
         }
     }
+
 public:
     DoubleShiftQR() :
         n(0), computed(false)
@@ -132,16 +145,33 @@ public:
         return mat_H;
     }
 
-    void apply_QtY(Vector &Y)
+    // Q = P0 * P1 * ...
+    // Q'y = P_{n-2} * ... * P1 * P0 * y
+    void apply_QtY(Vector &y)
     {
         if(!computed)
             throw std::logic_error("DoubleShiftQR: need to call compute() first");
+
+        Scalar *y_ptr = y.data();
+        for(int i = 0; i < n - 1; i++, y_ptr++)
+        {
+            apply_PX(y_ptr, i);
+        }
     }
 
+    // Q = P0 * P1 * ...
+    // YQ = Y * P0 * P1 * ...
     void apply_YQ(GenericMatrix Y)
     {
         if(!computed)
-            throw std::logic_error("UpperHessenbergQR: need to call compute() first");
+            throw std::logic_error("DoubleShiftQR: need to call compute() first");
+
+        int nrow = Y.rows();
+        for(int i = 0; i < n - 2; i++)
+        {
+            apply_XP(Y.block(0, i, nrow, 3), i);
+        }
+        apply_XP(Y.block(0, n - 2, nrow, 2), n - 2);
     }
 };
 
