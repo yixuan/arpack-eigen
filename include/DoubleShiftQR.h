@@ -23,7 +23,8 @@ private:
     Matrix mat_H;
     // Householder reflectors
     Matrix3X ref_u;
-
+    // Approximately zero
+    const Scalar prec;
     bool computed;
 
     void compute_reflector(const Scalar &x1, const Scalar &x2, const Scalar &x3, int ind)
@@ -33,9 +34,16 @@ private:
         // rho = -sign(x1)
         Scalar x1_new = x1 - ((x1 <= 0) - (x1 > 0)) * std::sqrt(x1 * x1 + tmp);
         Scalar x_norm = std::sqrt(x1_new * x1_new + tmp);
-        ref_u(0, ind) = x1_new / x_norm;
-        ref_u(1, ind) = x2 / x_norm;
-        ref_u(2, ind) = x3 / x_norm;
+        if(x_norm <= prec)
+        {
+            ref_u(0, ind) = 0;
+            ref_u(1, ind) = 0;
+            ref_u(2, ind) = 0;
+        } else {
+            ref_u(0, ind) = x1_new / x_norm;
+            ref_u(1, ind) = x2 / x_norm;
+            ref_u(2, ind) = x3 / x_norm;
+        }
     }
 
     void compute_reflector(const Scalar *x, int ind)
@@ -86,13 +94,16 @@ private:
 
 public:
     DoubleShiftQR() :
-        n(0), computed(false)
+        n(0),
+        prec(std::numeric_limits<Scalar>::epsilon()),
+        computed(false)
     {}
 
     DoubleShiftQR(ConstGenericMatrix &mat, Scalar s, Scalar t) :
         n(mat.rows()),
         mat_H(n, n),
         ref_u(3, n - 1),
+        prec(std::numeric_limits<Scalar>::epsilon()),
         computed(false)
     {
         compute(mat, s, t);
