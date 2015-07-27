@@ -125,6 +125,7 @@ TEST_CASE("QR decomposition with double shifts", "QR")
     m.array() -= 0.5;
     MatrixXd H = m.triangularView<Eigen::Upper>();
     H.diagonal(-1) = m.diagonal(-1);
+    H(1, 0) = 0;  // Test for the case when sub-diagonal element is zero
 
     VectorXd Qty = VectorXd::Random(n);
     MatrixXd YQ = MatrixXd::Random(n / 2, n);

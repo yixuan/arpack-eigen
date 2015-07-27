@@ -25,6 +25,7 @@ private:
     Matrix3X ref_u;
     // Approximately zero
     const Scalar prec;
+    bool new_start;
     bool computed;
 
     void compute_reflector(const Scalar &x1, const Scalar &x2, const Scalar &x3, int ind)
@@ -32,7 +33,7 @@ private:
         Scalar tmp = x2 * x2 + x3 * x3;
         // x1' = x1 - rho * ||x||
         // rho = -sign(x1)
-        Scalar x1_new = x1 - ((x1 <= 0) - (x1 > 0)) * std::sqrt(x1 * x1 + tmp);
+        Scalar x1_new = x1 - ((x1 < 0) - (x1 > 0)) * std::sqrt(x1 * x1 + tmp);
         Scalar x_norm = std::sqrt(x1_new * x1_new + tmp);
         if(x_norm <= prec)
         {
@@ -96,6 +97,7 @@ public:
     DoubleShiftQR() :
         n(0),
         prec(std::numeric_limits<Scalar>::epsilon()),
+        new_start(false),
         computed(false)
     {}
 
@@ -104,6 +106,7 @@ public:
         mat_H(n, n),
         ref_u(3, n - 1),
         prec(std::numeric_limits<Scalar>::epsilon()),
+        new_start(false),
         computed(false)
     {
         compute(mat, s, t);
@@ -121,22 +124,51 @@ public:
         mat_H = mat.template triangularView<Eigen::Upper>();
         mat_H.diagonal(-1) = mat.diagonal(-1);
 
-        // Calculate the first reflector
-        Scalar x = mat_H(0, 0) * (mat_H(0, 0) - s) + mat_H(0, 1) * mat_H(1, 0) + t;
-        Scalar y = mat_H(1, 0) * (mat_H(0, 0) + mat_H(1, 1) - s);
-        Scalar z = mat_H(2, 1) * mat_H(1, 0);
-        compute_reflector(x, y, z, 0);
-        // Apply the first reflector
-        apply_PX(mat_H.template topRows<3>(), 0);
-        apply_XP(mat_H.topLeftCorner(std::min(n, 4), 3), 0);
+        Scalar x, y, z;
 
-        // Transfrom mat_H to upper Hessenberg
+        // If the subdiagonal element is zero, we can skip the first column
+        // and have a new start in next iteration
+        if(std::abs(mat_H(1, 0)) <= prec)
+        {
+            compute_reflector(0, 0, 0, 0);
+            new_start = true;
+        } else {
+            // Calculate the first reflector
+            x = mat_H(0, 0) * (mat_H(0, 0) - s) + mat_H(0, 1) * mat_H(1, 0) + t;
+            y = mat_H(1, 0) * (mat_H(0, 0) + mat_H(1, 1) - s);
+            z = mat_H(2, 1) * mat_H(1, 0);
+            compute_reflector(x, y, z, 0);
+            // Apply the first reflector
+            apply_PX(mat_H.template topRows<3>(), 0);
+            apply_XP(mat_H.topLeftCorner(std::min(n, 4), 3), 0);
+        }
+
+        // Calculate the following reflectors
         for(int i = 1; i < n - 2; i++)
         {
-            compute_reflector(&mat_H(i, i - 1), i);
-            // Apply the reflector to H
-            apply_PX(mat_H.block(i, i - 1, 3, n - i + 1), i);
-            apply_XP(mat_H.block(0, i, std::min(n, i + 4), 3), i);
+            // If entering this loop, n is at least 4.
+
+            // First check: whether the subdiagonal element is zero
+            if(std::abs(mat_H(i + 1, i)) <= prec)
+            {
+                compute_reflector(0, 0, 0, i);
+                new_start = true;
+            } else if(new_start) {  // Second check: whether this is a new start
+                x = mat_H(i, i) * (mat_H(i, i) - s) + mat_H(i, i + 1) * mat_H(i + 1, i) + t;
+                y = mat_H(i + 1, i) * (mat_H(i, i) + mat_H(i + 1, i + 1) - s);
+                z = mat_H(i + 2, i + 1) * mat_H(i + 1, i);
+                compute_reflector(x, y, z, i);
+                // Apply the reflector to H
+                apply_PX(mat_H.block(i, i, 3, n - i), i);
+                apply_XP(mat_H.block(0, i, std::min(n, i + 4), 3), i);
+
+                new_start = false;
+            } else {
+                compute_reflector(&mat_H(i, i - 1), i);
+                // Apply the reflector to H
+                apply_PX(mat_H.block(i, i - 1, 3, n - i + 1), i);
+                apply_XP(mat_H.block(0, i, std::min(n, i + 4), 3), i);
+            }
         }
 
         // The last reflector
