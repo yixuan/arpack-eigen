@@ -14,6 +14,7 @@
 
 #include "SelectionRule.h"
 #include "UpperHessenbergQR.h"
+#include "DoubleShiftQR.h"
 #include "MatOp/DenseGenMatProd.h"
 #include "MatOp/DenseGenRealShiftSolve.h"
 #include "MatOp/DenseGenComplexShiftSolve.h"
@@ -182,7 +183,7 @@ private:
         if(k >= ncv)
             return;
 
-        QRdecomp decomp_gen;
+        DoubleShiftQR<Scalar> decomp_ds;
         UpperHessenbergQR<Scalar> decomp_hb;
         Vector em(ncv);
         em.setZero();
@@ -198,24 +199,17 @@ private:
                 // H <- R2 * Q2 + conj(mu) * I = Q2' * H * Q2
                 //
                 // (H - mu * I) * (H - conj(mu) * I) = Q1 * Q2 * R2 * R1 = Q * R
-                Scalar re = ritz_val[i].real();
-                Scalar s = std::norm(ritz_val[i]);
-                Matrix HH = fac_H;
-                HH.diagonal().array() -= 2 * re;
-                HH = fac_H * HH;
-                HH.diagonal().array() += s;
+                Scalar s = 2 * ritz_val[i].real();
+                Scalar t = std::norm(ritz_val[i]);
 
-                // NOTE: HH is no longer upper Hessenberg
-                decomp_gen.compute(HH);
-                QRQ Q = decomp_gen.householderQ();
+                decomp_ds.compute(fac_H, s, t);
 
                 // V -> VQ
-                fac_V.applyOnTheRight(Q);
+                decomp_ds.apply_YQ(fac_V);
                 // H -> Q'HQ
-                fac_H.applyOnTheRight(Q);
-                fac_H.applyOnTheLeft(Q.adjoint());
+                fac_H = decomp_ds.matrix_QtHQ();
                 // em -> Q'em
-                em.applyOnTheLeft(Q.adjoint());
+                decomp_ds.apply_QtY(em);
 
                 i++;
             } else {
