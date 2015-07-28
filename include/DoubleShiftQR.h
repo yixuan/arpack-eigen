@@ -53,17 +53,33 @@ private:
     }
 
     // P = I - 2 * u * u' = P'
+    // PX = X - 2 * u * (u'X)
     void apply_PX(GenericMatrix X, int u_ind)
     {
-        if(u_ind == n - 2)
+        const int nrow = X.rows();
+        const int ncol = X.cols();
+        const Scalar sqrt_2 = std::sqrt(Scalar(2));
+
+        Scalar u0 = sqrt_2 * ref_u(0, u_ind),
+               u1 = sqrt_2 * ref_u(1, u_ind),
+               u2 = sqrt_2 * ref_u(2, u_ind);
+
+        if(nrow == 2)
         {
-            Vector2 u;
-            u[0] = ref_u(0, u_ind);
-            u[1] = ref_u(1, u_ind);
-            X -= (2 * u) * (u.transpose() * X);
+            for(int i = 0; i < ncol; i++)
+            {
+                Scalar tmp = u0 * X(0, i) + u1 * X(1, i);
+                X(0, i) -= tmp * u0;
+                X(1, i) -= tmp * u1;
+            }
         } else {
-            Vector3 u = ref_u.col(u_ind);
-            X -= (2 * u) * (u.transpose() * X);
+            for(int i = 0; i < ncol; i++)
+            {
+                Scalar tmp = u0 * X(0, i) + u1 * X(1, i) + u2 * X(2, i);
+                X(0, i) -= tmp * u0;
+                X(1, i) -= tmp * u1;
+                X(2, i) -= tmp * u2;
+            }
         }
     }
 
@@ -71,32 +87,53 @@ private:
     // Px = x - 2 * dot(x, u) * u
     void apply_PX(Scalar *x, int u_ind)
     {
-        Scalar *u = &ref_u(0, u_ind);
-        Scalar dot = x[0] * u[0] + x[1] * u[1] + ((u_ind == n - 2) ? 0 : (x[2] * u[2]));
-        x[0] -= 2 * dot * u[0];
-        x[1] -= 2 * dot * u[1];
+        Scalar u0 = ref_u(0, u_ind),
+               u1 = ref_u(1, u_ind),
+               u2 = ref_u(2, u_ind);
+        Scalar dot2 = x[0] * u0 + x[1] * u1 + ((u_ind == n - 2) ? 0 : (x[2] * u2));
+        dot2 *= 2;
+        x[0] -= dot2 * u0;
+        x[1] -= dot2 * u1;
         if(u_ind < n - 2)
-            x[2] -= 2 * dot * u[2];
+            x[2] -= dot2 * u2;
     }
 
+    // XP = X - 2 * (X * u) * u'
     void apply_XP(GenericMatrix X, int u_ind)
     {
-        if(u_ind == n - 2)
+        const int nrow = X.rows();
+        const int ncol = X.cols();
+        const Scalar sqrt_2 = std::sqrt(Scalar(2));
+
+        Scalar u0 = sqrt_2 * ref_u(0, u_ind),
+               u1 = sqrt_2 * ref_u(1, u_ind),
+               u2 = sqrt_2 * ref_u(2, u_ind);
+        Scalar *X0 = &X(0, 0), *X1 = &X(0, 1);
+
+        if(ncol == 2)
         {
-            Vector2 u;
-            u[0] = ref_u(0, u_ind);
-            u[1] = ref_u(1, u_ind);
-            X -= (X * (2 * u)) * u.transpose();
+            for(int i = 0; i < nrow; i++)
+            {
+                Scalar tmp = u0 * X0[i] + u1 * X1[i];
+                X0[i] -= tmp * u0;
+                X1[i] -= tmp * u1;
+            }
         } else {
-            Vector3 u = ref_u.col(u_ind);
-            X -= (X * (2 * u)) * u.transpose();
+            Scalar *X2 = &X(0, 2);
+            for(int i = 0; i < nrow; i++)
+            {
+                Scalar tmp = u0 * X0[i] + u1 * X1[i] + u2 * X2[i];
+                X0[i] -= tmp * u0;
+                X1[i] -= tmp * u1;
+                X2[i] -= tmp * u2;
+            }
         }
     }
 
 public:
     DoubleShiftQR() :
         n(0),
-        prec(std::numeric_limits<Scalar>::epsilon()),
+        prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(0.9))),
         new_start(false),
         computed(false)
     {}
@@ -105,7 +142,7 @@ public:
         n(mat.rows()),
         mat_H(n, n),
         ref_u(3, n - 1),
-        prec(std::numeric_limits<Scalar>::epsilon()),
+        prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(0.9))),
         new_start(false),
         computed(false)
     {
