@@ -64,6 +64,9 @@ private:
                u1 = sqrt_2 * ref_u(1, u_ind),
                u2 = sqrt_2 * ref_u(2, u_ind);
 
+        if(u0 * u0 + u1 * u1 + u2 * u2 <= prec)
+            return;
+
         if(nrow == 2)
         {
             for(int i = 0; i < ncol; i++)
@@ -90,6 +93,10 @@ private:
         Scalar u0 = ref_u(0, u_ind),
                u1 = ref_u(1, u_ind),
                u2 = ref_u(2, u_ind);
+
+        if(u0 * u0 + u1 * u1 + u2 * u2 <= prec)
+            return;
+
         Scalar dot2 = x[0] * u0 + x[1] * u1 + ((u_ind == n - 2) ? 0 : (x[2] * u2));
         dot2 *= 2;
         x[0] -= dot2 * u0;
@@ -109,6 +116,9 @@ private:
                u1 = sqrt_2 * ref_u(1, u_ind),
                u2 = sqrt_2 * ref_u(2, u_ind);
         Scalar *X0 = &X(0, 0), *X1 = &X(0, 1);
+
+        if(u0 * u0 + u1 * u1 + u2 * u2 <= prec)
+            return;
 
         if(ncol == 2)
         {
@@ -167,6 +177,7 @@ public:
         // and have a new start in next iteration
         if(std::abs(mat_H(1, 0)) <= prec)
         {
+            mat_H(1, 0) = 0;
             compute_reflector(0, 0, 0, 0);
             new_start = true;
         } else {
@@ -186,10 +197,11 @@ public:
             // If entering this loop, n is at least 4.
 
             // First check: whether the subdiagonal element is zero
-            if(std::abs(mat_H(i + 1, i)) <= prec)
+            if(new_start && std::abs(mat_H(i + 1, i)) <= prec)
             {
+                mat_H(i + 1, i) = 0;
                 compute_reflector(0, 0, 0, i);
-                new_start = true;
+                // new_start = true;  -- already true
             } else if(new_start) {  // Second check: whether this is a new start
                 x = mat_H(i, i) * (mat_H(i, i) - s) + mat_H(i, i + 1) * mat_H(i + 1, i) + t;
                 y = mat_H(i + 1, i) * (mat_H(i, i) + mat_H(i + 1, i + 1) - s);
@@ -205,6 +217,7 @@ public:
                 // Apply the reflector to H
                 apply_PX(mat_H.block(i, i - 1, 3, n - i + 1), i);
                 apply_XP(mat_H.block(0, i, std::min(n, i + 4), 3), i);
+                // new_start = false;  -- already false
             }
         }
 
