@@ -58,17 +58,17 @@ void run_test(MatrixType &H)
 
     MatrixXd YQ = Y;
     decomp.apply_YQ(YQ);
-    INFO( "max error of QY = " << (YQ - Y * Q).cwiseAbs().maxCoeff() );
+    INFO( "max error of YQ = " << (YQ - Y * Q).cwiseAbs().maxCoeff() );
     REQUIRE( (YQ - Y * Q).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     MatrixXd QtY = Y;
     decomp.apply_QtY(QtY);
-    INFO( "max error of QY = " << (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() );
+    INFO( "max error of Q'Y = " << (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() );
     REQUIRE( (QtY - Q.transpose() * Y).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     MatrixXd YQt = Y;
     decomp.apply_YQt(YQt);
-    INFO( "max error of QY = " << (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() );
+    INFO( "max error of YQ' = " << (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() );
     REQUIRE( (YQt - Y * Q.transpose()).cwiseAbs().maxCoeff() == Approx(0.0) );
 
     // Test "apply" functions for vectors
@@ -81,7 +81,7 @@ void run_test(MatrixType &H)
 
     VectorXd Qty = y;
     decomp.apply_QtY(Qty);
-    INFO( "max error of Qy = " << (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() );
+    INFO( "max error of Q'y = " << (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() );
     REQUIRE( (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() == Approx(0.0) );
 }
 
