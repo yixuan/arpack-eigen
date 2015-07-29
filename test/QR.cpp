@@ -127,33 +127,35 @@ TEST_CASE("QR decomposition with double shifts", "QR")
     H.diagonal(-1) = m.diagonal(-1);
     H(1, 0) = 0;  // Test for the case when sub-diagonal element is zero
 
-    VectorXd Qty = VectorXd::Random(n);
-    MatrixXd YQ = MatrixXd::Random(n / 2, n);
-
     double s = 2, t = 3;
 
     MatrixXd M = H * H - s * H + t * MatrixXd::Identity(n, n);
     Eigen::HouseholderQR<MatrixXd> qr(M);
-    Eigen::HouseholderSequence<MatrixXd, VectorXd> Q = qr.householderQ();
-    MatrixXd H0 = H;
-    VectorXd v0 = Qty;
-    MatrixXd Y0 = YQ;
-    H0.applyOnTheRight(Q);
-    H0.applyOnTheLeft(Q.adjoint());
-    v0.applyOnTheLeft(Q.adjoint());
-    Y0.applyOnTheRight(Q);
+    MatrixXd Q0 = qr.householderQ();
 
     DoubleShiftQR<double> decomp(H, s, t);
-    MatrixXd QtHQ = decomp.matrix_QtHQ();
+    MatrixXd Q = MatrixXd::Identity(n, n);
+    decomp.apply_YQ(Q);
+
+    // Equal up to signs
+    INFO( "max error of Q = " << (Q.cwiseAbs() - Q0.cwiseAbs()).cwiseAbs().maxCoeff() );
+    REQUIRE( (Q.cwiseAbs() - Q0.cwiseAbs()).cwiseAbs().maxCoeff() == Approx(0.0) );
+
+    // Test Q'HQ
+    INFO( "max error of Q'HQ = " << (decomp.matrix_QtHQ() - Q.transpose() * H * Q).cwiseAbs().maxCoeff() );
+    REQUIRE( (decomp.matrix_QtHQ() - Q.transpose() * H * Q).cwiseAbs().maxCoeff() == Approx(0.0) );
+
+    // Test apply functions
+    VectorXd y = VectorXd::Random(n);
+    MatrixXd Y = MatrixXd::Random(n / 2, n);
+
+    VectorXd Qty = y;
     decomp.apply_QtY(Qty);
+    INFO( "max error of Q'y = " << (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() );
+    REQUIRE( (Qty - Q.transpose() * y).cwiseAbs().maxCoeff() == Approx(0.0) );
+
+    MatrixXd YQ = Y;
     decomp.apply_YQ(YQ);
-
-    INFO( "max error of QtHQ = " << (H0 - QtHQ).cwiseAbs().maxCoeff() );
-    REQUIRE( (H0 - QtHQ).cwiseAbs().maxCoeff() == Approx(0.0) );
-
-    INFO( "max error of Qty = " << (v0 - Qty).cwiseAbs().maxCoeff() );
-    REQUIRE( (v0 - Qty).cwiseAbs().maxCoeff() == Approx(0.0) );
-
-    INFO( "max error of YQ = " << (Y0 - YQ).cwiseAbs().maxCoeff() );
-    REQUIRE( (Y0 - YQ).cwiseAbs().maxCoeff() == Approx(0.0) );
+    INFO( "max error of YQ = " << (YQ- Y * Q).cwiseAbs().maxCoeff() );
+    REQUIRE( (YQ- Y * Q).cwiseAbs().maxCoeff() == Approx(0.0) );
 }
