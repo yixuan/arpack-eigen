@@ -2,7 +2,6 @@
 #define GEN_EIGS_SOLVER_H
 
 #include <Eigen/Core>
-#include <Eigen/QR>
 #include <Eigen/Eigenvalues>
 
 #include <vector>
@@ -207,6 +206,9 @@ private:
                 // V -> VQ
                 decomp_ds.apply_YQ(fac_V);
                 // H -> Q'HQ
+                // Matrix Q = Matrix::Identity(ncv, ncv);
+                // decomp_ds.apply_YQ(Q);
+                // fac_H = Q.transpose() * fac_H * Q;
                 fac_H = decomp_ds.matrix_QtHQ();
                 // em -> Q'em
                 decomp_ds.apply_QtY(em);
