@@ -16,33 +16,30 @@ private:
     typedef Eigen::Ref<Matrix> GenericMatrix;
     typedef const Eigen::Ref<const Matrix> ConstGenericMatrix;
 
-    int n;
-    Matrix mat_H;
-    Scalar shift_s;
-    Scalar shift_t;
-    // Householder reflectors
-    Matrix3X ref_u;
-    // Approximately zero
-    const Scalar prec;
-    bool computed;
+    int n;              // Dimension of the matrix
+    Matrix mat_H;       // A copy of the matrix to be factorized
+    Scalar shift_s;     // Shift constant
+    Scalar shift_t;     // Shift constant
+    Matrix3X ref_u;     // Householder reflectors
+    const Scalar prec;  // Approximately zero
+    bool computed;      // Whether matrix has been factorized
 
     void compute_reflector(const Scalar &x1, const Scalar &x2, const Scalar &x3, int ind)
     {
         Scalar tmp = x2 * x2 + x3 * x3;
+        Scalar r = std::sqrt(x1 * x1 + tmp);
+        if(r <= prec)
+        {
+            ref_u.col(ind).setZero();
+            return;
+        }
         // x1' = x1 - rho * ||x||
         // rho = -sign(x1)
         Scalar x1_new = x1 - ((x1 < 0) - (x1 > 0)) * std::sqrt(x1 * x1 + tmp);
         Scalar x_norm = std::sqrt(x1_new * x1_new + tmp);
-        if(x_norm <= prec)
-        {
-            ref_u(0, ind) = 0;
-            ref_u(1, ind) = 0;
-            ref_u(2, ind) = 0;
-        } else {
-            ref_u(0, ind) = x1_new / x_norm;
-            ref_u(1, ind) = x2 / x_norm;
-            ref_u(2, ind) = x3 / x_norm;
-        }
+        ref_u(0, ind) = x1_new / x_norm;
+        ref_u(1, ind) = x2 / x_norm;
+        ref_u(2, ind) = x3 / x_norm;
     }
 
     void compute_reflector(const Scalar *x, int ind)
@@ -55,16 +52,24 @@ private:
         // For the block X, we can assume that ncol == nrow,
         // and all sub-diagonal elements are non-zero
         const int nrow = X.rows();
-        // For block size <= 2, there is no need to apply reflectors
+        // For block size == 1, there is no need to apply reflectors
         if(nrow == 1)
         {
             compute_reflector(0, 0, 0, start_ind);
             return;
-        } else if(nrow == 2) {
-            compute_reflector(0, 0, 0, start_ind);
+        }
+
+        // For block size == 2, do a Givens rotation on M = X * X - s * X + t * I
+        if(nrow == 2) {
+            Scalar x = X(0, 0) * (X(0, 0) - shift_s) + X(0, 1) * X(1, 0) + shift_t;
+            Scalar y = X(1, 0) * (X(0, 0) + X(1, 1) - shift_s);
+            compute_reflector(x, y, 0, start_ind);
+            apply_PX(X.block(0, 0, 2, 2), start_ind);
+            apply_XP(X.block(0, 0, 2, 2), start_ind);
             compute_reflector(0, 0, 0, start_ind + 1);
             return;
         }
+
         // For block size >=3, use the regular strategy
         Scalar x = X(0, 0) * (X(0, 0) - shift_s) + X(0, 1) * X(1, 0) + shift_t;
         Scalar y = X(1, 0) * (X(0, 0) + X(1, 1) - shift_s);
@@ -75,10 +80,9 @@ private:
         apply_XP(X.topLeftCorner(std::min(nrow, 4), 3), start_ind);
 
         // Calculate the following reflectors
+        // If entering this loop, nrow is at least 4.
         for(int i = 1; i < nrow - 2; i++)
         {
-            // If entering this loop, nrow is at least 4.
-
             compute_reflector(&X(i, i - 1), start_ind + i);
             // Apply the reflector to X
             apply_PX(X.block(i, i - 1, 3, nrow - i + 1), start_ind + i);
@@ -87,10 +91,11 @@ private:
 
         // The last reflector
         compute_reflector(X(nrow - 2, nrow - 3), X(nrow - 1, nrow - 3), 0, start_ind + nrow - 2);
-        compute_reflector(0, 0, 0, start_ind + nrow - 1);
         // Apply the reflector to X
         apply_PX(X.template block<2, 3>(nrow - 2, nrow - 3), start_ind + nrow - 2);
         apply_XP(X.block(0, nrow - 2, nrow, 2), start_ind + nrow - 2);
+
+        compute_reflector(0, 0, 0, start_ind + nrow - 1);
     }
 
     // P = I - 2 * u * u' = P'
@@ -184,7 +189,7 @@ private:
 public:
     DoubleShiftQR() :
         n(0),
-        prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(0.9))),
+        prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(2) / 3)),
         computed(false)
     {}
 
@@ -194,7 +199,7 @@ public:
         shift_s(s),
         shift_t(t),
         ref_u(3, n),
-        prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(0.9))),
+        prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(2) / 3)),
         computed(false)
     {
         compute(mat, s, t);
@@ -214,6 +219,8 @@ public:
         mat_H = mat.template triangularView<Eigen::Upper>();
         mat_H.diagonal(-1) = mat.diagonal(-1);
 
+        // Obtain the indices of zero elements in the subdiagonal,
+        // so that H can be divided into several blocks
         std::vector<int> zero_ind;
         zero_ind.reserve(n - 1);
         zero_ind.push_back(0);
@@ -231,10 +238,11 @@ public:
         {
             int start = zero_ind[i];
             int end = zero_ind[i + 1] - 1;
-            // Call this block X
-            compute_reflectors_from_block(mat_H.block(start, start, end - start + 1, end - start + 1), start);
+            int block_size = end - start + 1;
+            // Compute refelctors from each block X
+            compute_reflectors_from_block(mat_H.block(start, start, block_size, block_size), start);
             // Apply reflectors to the block right to X
-            if(end < n - 1 && end - start >= 2)
+            if(end < n - 1 && block_size >= 2)
             {
                 for(int j = start; j < end; j++)
                 {
@@ -242,7 +250,7 @@ public:
                 }
             }
             // Apply reflectors to the block above X
-            if(start > 0 && end - start >= 2)
+            if(start > 0 && block_size >= 2)
             {
                 for(int j = start; j < end; j++)
                 {
