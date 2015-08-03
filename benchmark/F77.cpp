@@ -1,5 +1,6 @@
+#include <Eigen/Core>
 #include <iostream>
-#include <Eigen/Dense>
+#include <ctime>
 #include "ArpackFun.h"
 
 using Eigen::MatrixXd;
@@ -8,8 +9,13 @@ using Eigen::MatrixXcd;
 using Eigen::VectorXcd;
 typedef Eigen::Map<VectorXd> MapVec;
 
-int eigs_sym_F77(MatrixXd &M, VectorXd &init_resid, int k, int m)
+void eigs_sym_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
+                  double &time_used, double &prec_err)
 {
+    clock_t start, end;
+    prec_err = -1.0;
+    start = clock();
+
     // Begin ARPACK
     //
     // Initial value of ido
@@ -89,7 +95,9 @@ int eigs_sym_F77(MatrixXd &M, VectorXd &init_resid, int k, int m)
         delete [] resid;
 
         std::cout << "errors occured" << std::endl;
-        return 1;
+        end = clock();
+        time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+        return;
     }
 
     // Retrieve results
@@ -139,22 +147,34 @@ int eigs_sym_F77(MatrixXd &M, VectorXd &init_resid, int k, int m)
     if (ierr < 0)
     {
         std::cout << "errors occured" << std::endl;
-        return 1;
+        end = clock();
+        time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+        return;
     }
 
+/*
     std::cout << "computed eigenvalues D = \n" << evals.transpose() << std::endl;
     std::cout << "first 5 rows of computed eigenvectors U = \n" <<
         evecs.topLeftCorner(5, nconv) << std::endl;
     std::cout << "nconv = " << nconv << std::endl;
     std::cout << "nops = " << niter << std::endl;
+*/
 
-    return 0;
+    end = clock();
+    time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+    MatrixXd err = M * evecs.leftCols(nev) - evecs.leftCols(nev) * evals.asDiagonal();
+    prec_err = err.cwiseAbs().maxCoeff();
 }
 
 
 
-int eigs_gen_F77(MatrixXd &M, VectorXd &init_resid, int k, int m)
+void eigs_gen_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
+                  double &time_used, double &prec_err)
 {
+    clock_t start, end;
+    prec_err = -1.0;
+    start = clock();
+
     // Begin ARPACK
     //
     // Initial value of ido
@@ -235,7 +255,10 @@ int eigs_gen_F77(MatrixXd &M, VectorXd &init_resid, int k, int m)
         delete [] resid;
 
         std::cout << "errors occured" << std::endl;
-        return 1;
+        end = clock();
+        time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+
+        return;
     }
 
     // Retrieve results
@@ -289,9 +312,13 @@ int eigs_gen_F77(MatrixXd &M, VectorXd &init_resid, int k, int m)
     if (ierr < 0)
     {
         std::cout << "errors occured" << std::endl;
-        return 1;
+        end = clock();
+        time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+
+        return;
     }
 
+/*
     VectorXcd evals(evals_re.size());
     evals.real() = evals_re;
     evals.imag() = evals_im;
@@ -300,6 +327,8 @@ int eigs_gen_F77(MatrixXd &M, VectorXd &init_resid, int k, int m)
         evecs.topLeftCorner(5, nconv) << std::endl;
     std::cout << "nconv = " << nconv << std::endl;
     std::cout << "nops = " << niter << std::endl;
+*/
 
-    return 0;
+    end = clock();
+    time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
 }
