@@ -84,8 +84,8 @@ private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
     typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> Array;
     typedef Eigen::Array<bool, Eigen::Dynamic, 1> BoolArray;
-    typedef Eigen::Map<const Matrix> MapMat;
-    typedef Eigen::Map<const Vector> MapVec;
+    typedef Eigen::Map<Matrix> MapMat;
+    typedef Eigen::Map<Vector> MapVec;
 
     typedef std::complex<Scalar> Complex;
     typedef Eigen::Matrix<Complex, Eigen::Dynamic, Eigen::Dynamic> ComplexMatrix;
@@ -131,7 +131,7 @@ private:
 
         fac_f = fk;
 
-        Vector v(dim_n), w(dim_n);
+        Vector w(dim_n);
         Scalar beta = 0.0;
         // Keep the upperleft k x k submatrix of H and set other elements to 0
         fac_H.rightCols(ncv - from_k).setZero();
@@ -139,18 +139,20 @@ private:
         for(int i = from_k; i <= to_m - 1; i++)
         {
             beta = fac_f.norm();
-            v.noalias() = fac_f / beta;
-            fac_V.col(i) = v; // The (i+1)-th column
-            fac_H.block(i, 0, 1, i).setZero();
+            fac_V.col(i).noalias() = fac_f / beta; // The (i+1)-th column
             fac_H(i, i - 1) = beta;
 
-            op->perform_op(v.data(), w.data());
+            // w = A * v, v = fac_V.col(i)
+            op->perform_op(&fac_V(0, i), w.data());
             nmatop++;
 
-            Vector h = fac_V.leftCols(i + 1).transpose() * w;
-            fac_H.block(0, i, i + 1, 1) = h;
+            // First i+1 columns of V
+            MapMat Vs(fac_V.data(), dim_n, i + 1);
+            // h = fac_H(0:i, i)
+            MapVec h(&fac_H(0, i), i + 1);
+            h.noalias() = Vs.transpose() * w;
 
-            fac_f = w - fac_V.leftCols(i + 1) * h;
+            fac_f = w - Vs * h;
             // Correct f if it is not orthogonal to V
             // Typically the largest absolute value occurs in
             // the first element, i.e., <v1, f>, so we use this
@@ -161,7 +163,7 @@ private:
                 Vector Vf(i + 1);
                 Vf.tail(i) = fac_V.block(0, 1, dim_n, i).transpose() * fac_f;
                 Vf[0] = v1f;
-                fac_f -= fac_V.leftCols(i + 1) * Vf;
+                fac_f -= Vs * Vf;
             }
         }
     }

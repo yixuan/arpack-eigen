@@ -102,32 +102,37 @@ private:
     // PX = X - 2 * u * (u'X)
     void apply_PX(GenericMatrix X, int u_ind)
     {
-        const int nrow = X.rows();
-        const int ncol = X.cols();
         const Scalar sqrt_2 = std::sqrt(Scalar(2));
 
         Scalar u0 = sqrt_2 * ref_u(0, u_ind),
                u1 = sqrt_2 * ref_u(1, u_ind),
                u2 = sqrt_2 * ref_u(2, u_ind);
 
-        if(u0 * u0 + u1 * u1 + u2 * u2 <= prec)
+        if(std::abs(u0) + std::abs(u1) + std::abs(u2) <= 3 * sqrt_2 * prec)
             return;
+
+        const int nrow = X.rows();
+        const int ncol = X.cols();
 
         if(nrow == 2)
         {
+            Scalar *xptr;
             for(int i = 0; i < ncol; i++)
             {
-                Scalar tmp = u0 * X(0, i) + u1 * X(1, i);
-                X(0, i) -= tmp * u0;
-                X(1, i) -= tmp * u1;
+                xptr = &X(0, i);
+                Scalar tmp = u0 * xptr[0] + u1 * xptr[1];
+                xptr[0] -= tmp * u0;
+                xptr[1] -= tmp * u1;
             }
         } else {
+            Scalar *xptr;
             for(int i = 0; i < ncol; i++)
             {
-                Scalar tmp = u0 * X(0, i) + u1 * X(1, i) + u2 * X(2, i);
-                X(0, i) -= tmp * u0;
-                X(1, i) -= tmp * u1;
-                X(2, i) -= tmp * u2;
+                xptr = &X(0, i);
+                Scalar tmp = u0 * xptr[0] + u1 * xptr[1] + u2 * xptr[2];
+                xptr[0] -= tmp * u0;
+                xptr[1] -= tmp * u1;
+                xptr[2] -= tmp * u2;
             }
         }
     }
@@ -140,31 +145,33 @@ private:
                u1 = ref_u(1, u_ind),
                u2 = ref_u(2, u_ind);
 
-        if(u0 * u0 + u1 * u1 + u2 * u2 <= prec)
+        if(std::abs(u0) + std::abs(u1) + std::abs(u2) <= 3 * prec)
             return;
 
-        Scalar dot2 = x[0] * u0 + x[1] * u1 + (std::abs(u2) <= prec ? 0 : (x[2] * u2));
+        // When the reflector only contains two elements, u2 has been set to zero
+        bool u2_is_zero = (std::abs(u2) <= prec);
+        Scalar dot2 = x[0] * u0 + x[1] * u1 + (u2_is_zero ? 0 : (x[2] * u2));
         dot2 *= 2;
         x[0] -= dot2 * u0;
         x[1] -= dot2 * u1;
-        if(std::abs(u2) > prec)
+        if(!u2_is_zero)
             x[2] -= dot2 * u2;
     }
 
     // XP = X - 2 * (X * u) * u'
     void apply_XP(GenericMatrix X, int u_ind)
     {
-        const int nrow = X.rows();
-        const int ncol = X.cols();
         const Scalar sqrt_2 = std::sqrt(Scalar(2));
-
         Scalar u0 = sqrt_2 * ref_u(0, u_ind),
                u1 = sqrt_2 * ref_u(1, u_ind),
                u2 = sqrt_2 * ref_u(2, u_ind);
-        Scalar *X0 = &X(0, 0), *X1 = &X(0, 1);
 
-        if(u0 * u0 + u1 * u1 + u2 * u2 <= prec)
+        if(std::abs(u0) + std::abs(u1) + std::abs(u2) <= 3 * sqrt_2 * prec)
             return;
+
+        const int nrow = X.rows();
+        const int ncol = X.cols();
+        Scalar *X0 = &X(0, 0), *X1 = &X(0, 1);
 
         if(ncol == 2)
         {
