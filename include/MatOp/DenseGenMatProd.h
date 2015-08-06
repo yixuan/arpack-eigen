@@ -63,7 +63,7 @@ public:
     {
         MapVec x(x_in, mat.cols());
         MapVec y(y_out, mat.rows());
-        y = mat * x;
+        y.noalias() = mat * x;
     }
 };
 
