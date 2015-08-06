@@ -186,9 +186,7 @@ private:
 
         DoubleShiftQR<Scalar> decomp_ds;
         UpperHessenbergQR<Scalar> decomp_hb;
-        Vector em(ncv);
-        em.setZero();
-        em[ncv - 1] = 1;
+        Matrix Q = Matrix::Identity(ncv, ncv);
 
         for(int i = k; i < ncv; i++)
         {
@@ -205,15 +203,13 @@ private:
 
                 decomp_ds.compute(fac_H, s, t);
 
-                // V -> VQ
-                decomp_ds.apply_YQ(fac_V);
+                // Q -> Q * Qi
+                decomp_ds.apply_YQ(Q);
                 // H -> Q'HQ
                 // Matrix Q = Matrix::Identity(ncv, ncv);
                 // decomp_ds.apply_YQ(Q);
                 // fac_H = Q.transpose() * fac_H * Q;
                 fac_H = decomp_ds.matrix_QtHQ();
-                // em -> Q'em
-                decomp_ds.apply_QtY(em);
 
                 i++;
             } else {
@@ -221,17 +217,29 @@ private:
                 fac_H.diagonal().array() -= ritz_val[i].real();
                 decomp_hb.compute(fac_H);
 
-                // V -> VQ
-                decomp_hb.apply_YQ(fac_V);
+                // Q -> Q * Qi
+                decomp_hb.apply_YQ(Q);
                 // H -> Q'HQ = RQ + mu * I
                 fac_H = decomp_hb.matrix_RQ();
                 fac_H.diagonal().array() += ritz_val[i].real();
-                // em -> Q'em
-                decomp_hb.apply_QtY(em);
             }
         }
+        // V -> VQ
+        // Q has some elements being zero
+        // The first (ncv - k + i) elements of the i-th column of Q are non-zero
+        Matrix Vs(dim_n, k + 1);
+        int nnz;
+        for(int i = 0; i < k; i++)
+        {
+            nnz = ncv - k + i + 1;
+            MapMat V(fac_V.data(), dim_n, nnz);
+            MapVec q(&Q(0, i), nnz);
+            Vs.col(i).noalias() = V * q;
+        }
+        Vs.col(k).noalias() = fac_V * Q.col(k);
+        fac_V.leftCols(k + 1).noalias() = Vs;
 
-        Vector fk = fac_f * em[k - 1] + fac_V.col(k) * fac_H(k, k - 1);
+        Vector fk = fac_f * Q(ncv - 1, k - 1) + fac_V.col(k) * fac_H(k, k - 1);
         factorize_from(k, ncv, fk);
         retrieve_ritzpair();
     }
