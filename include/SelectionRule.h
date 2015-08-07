@@ -60,69 +60,85 @@ enum SELECT_EIGENVALUE_ALIAS
 
 /// \cond
 
-// Default comparator: an empty class without
-// operator() definition, so it won't compile
-// when operator() is called on this class
-template <typename Scalar, int SelectionRule>
-class EigenvalueComparator
+// Get the element type of a "scalar"
+// ElemType<double>                   => double
+// ElemType< std::complex<double> >   => double
+template <typename T>
+class ElemType
 {
 public:
-    typedef std::pair<Scalar, int> SortPair;
+    typedef T type;
+};
+
+template <typename T>
+class ElemType< std::complex<T> >
+{
+public:
+    typedef T type;
+};
+
+// When comparing eigenvalues, we first calculate the "target"
+// to sort. For example, if we want to choose the eigenvalues with
+// largest magnitude, the target will be -std::abs(x).
+// The minus sign is due to the fact that std::sort() sorts in ascending order.
+
+// Default target: throw an exceptoin
+template <typename Scalar, int SelectionRule>
+class SortingTarget
+{
+public:
+    static typename ElemType<Scalar>::type get(const Scalar &val)
+    {
+        throw std::invalid_argument("incompatible selection rule");
+        return -std::abs(val);
+    }
 };
 
 // Specialization for LARGEST_MAGN
 // This covers [float, double, complex] x [LARGEST_MAGN]
 template <typename Scalar>
-class EigenvalueComparator<Scalar, LARGEST_MAGN>
+class SortingTarget<Scalar, LARGEST_MAGN>
 {
 public:
-    typedef std::pair<Scalar, int> SortPair;
-
-    bool operator() (SortPair v1, SortPair v2)
+    static typename ElemType<Scalar>::type get(const Scalar &val)
     {
-        return std::abs(v1.first) > std::abs(v2.first);
+        return -std::abs(val);
     }
 };
 
 // Specialization for LARGEST_REAL
 // This covers [complex] x [LARGEST_REAL]
 template <typename RealType>
-class EigenvalueComparator<std::complex<RealType>, LARGEST_REAL>
+class SortingTarget<std::complex<RealType>, LARGEST_REAL>
 {
 public:
-    typedef std::pair<std::complex<RealType>, int> SortPair;
-
-    bool operator() (SortPair v1, SortPair v2)
+    static RealType get(const std::complex<RealType> &val)
     {
-        return v1.first.real() > v2.first.real();
+        return -val.real();
     }
 };
 
 // Specialization for LARGEST_IMAG
 // This covers [complex] x [LARGEST_IMAG]
 template <typename RealType>
-class EigenvalueComparator<std::complex<RealType>, LARGEST_IMAG>
+class SortingTarget<std::complex<RealType>, LARGEST_IMAG>
 {
 public:
-    typedef std::pair<std::complex<RealType>, int> SortPair;
-
-    bool operator() (SortPair v1, SortPair v2)
+    static RealType get(const std::complex<RealType> &val)
     {
-        return std::abs(v1.first.imag()) > std::abs(v2.first.imag());
+        return -std::abs(val.imag());
     }
 };
 
 // Specialization for LARGEST_ALGE
 // This covers [float, double] x [LARGEST_ALGE]
 template <typename Scalar>
-class EigenvalueComparator<Scalar, LARGEST_ALGE>
+class SortingTarget<Scalar, LARGEST_ALGE>
 {
 public:
-    typedef std::pair<Scalar, int> SortPair;
-
-    bool operator() (SortPair v1, SortPair v2)
+    static Scalar get(const Scalar &val)
     {
-        return v1.first > v2.first;
+        return -val;
     }
 };
 
@@ -131,70 +147,105 @@ public:
 // SymEigsSolver.h => retrieve_ritzpair().
 // There we move the smallest values to the proper locations.
 template <typename Scalar>
-class EigenvalueComparator<Scalar, BOTH_ENDS>
+class SortingTarget<Scalar, BOTH_ENDS>
 {
 public:
-    typedef std::pair<Scalar, int> SortPair;
-
-    bool operator() (SortPair v1, SortPair v2)
+    static Scalar get(const Scalar &val)
     {
-        return v1.first > v2.first;
+        return -val;
     }
 };
 
 // Specialization for SMALLEST_MAGN
 // This covers [float, double, complex] x [SMALLEST_MAGN]
 template <typename Scalar>
-class EigenvalueComparator<Scalar, SMALLEST_MAGN>
+class SortingTarget<Scalar, SMALLEST_MAGN>
 {
 public:
-    typedef std::pair<Scalar, int> SortPair;
-
-    bool operator() (SortPair v1, SortPair v2)
+    static typename ElemType<Scalar>::type get(const Scalar &val)
     {
-        return std::abs(v1.first) <= std::abs(v2.first);
+        return std::abs(val);
     }
 };
 
 // Specialization for SMALLEST_REAL
 // This covers [complex] x [SMALLEST_REAL]
 template <typename RealType>
-class EigenvalueComparator<std::complex<RealType>, SMALLEST_REAL>
+class SortingTarget<std::complex<RealType>, SMALLEST_REAL>
 {
 public:
-    typedef std::pair<std::complex<RealType>, int> SortPair;
-
-    bool operator() (SortPair v1, SortPair v2)
+    static RealType get(const std::complex<RealType> &val)
     {
-        return v1.first.real() <= v2.first.real();
+        return val.real();
     }
 };
 
 // Specialization for SMALLEST_IMAG
 // This covers [complex] x [SMALLEST_IMAG]
 template <typename RealType>
-class EigenvalueComparator<std::complex<RealType>, SMALLEST_IMAG>
+class SortingTarget<std::complex<RealType>, SMALLEST_IMAG>
 {
 public:
-    typedef std::pair<std::complex<RealType>, int> SortPair;
-
-    bool operator() (SortPair v1, SortPair v2)
+    static RealType get(const std::complex<RealType> &val)
     {
-        return std::abs(v1.first.imag()) <= std::abs(v2.first.imag());
+        return std::abs(val.imag());
     }
 };
 
 // Specialization for SMALLEST_ALGE
 // This covers [float, double] x [SMALLEST_ALGE]
 template <typename Scalar>
-class EigenvalueComparator<Scalar, SMALLEST_ALGE>
+class SortingTarget<Scalar, SMALLEST_ALGE>
 {
 public:
-    typedef std::pair<Scalar, int> SortPair;
-
-    bool operator() (SortPair v1, SortPair v2)
+    static Scalar get(const Scalar &val)
     {
-        return v1.first <= v2.first;
+        return val;
+    }
+};
+
+// Sort eigenvalues and return the order index
+template <typename PairType>
+class PairComparator
+{
+public:
+    bool operator() (const PairType &v1, const PairType &v2)
+    {
+        return v1.first < v2.first;
+    }
+};
+
+template <typename T, int SelectionRule>
+class SortEigenvalue
+{
+private:
+    typedef typename ElemType<T>::type TargetType; // Type of the sorting target, will be
+                                                   // a floating number type, e.g. "double"
+    typedef std::pair<TargetType, int> PairType;   // Type of the sorting pair, including
+                                                   // the sorting target and the index
+
+    std::vector<PairType> pair_sort;
+
+public:
+    SortEigenvalue(const T* start, int size) :
+        pair_sort(size)
+    {
+        for(int i = 0; i < size; i++)
+        {
+            pair_sort[i].first = SortingTarget<T, SelectionRule>::get(start[i]);
+            pair_sort[i].second = i;
+        }
+        PairComparator<PairType> comp;
+        std::sort(pair_sort.begin(), pair_sort.end(), comp);
+    }
+
+    std::vector<int> index()
+    {
+        std::vector<int> ind(pair_sort.size());
+        for(unsigned int i = 0; i < ind.size(); i++)
+            ind[i] = pair_sort[i].second;
+
+        return ind;
     }
 };
 
