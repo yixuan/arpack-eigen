@@ -1,6 +1,6 @@
 #include <Eigen/Core>
 #include <iostream>
-#include <ctime>
+#include "timer.h"
 #include "ArpackFun.h"
 
 using Eigen::MatrixXd;
@@ -12,9 +12,9 @@ typedef Eigen::Map<VectorXd> MapVec;
 void eigs_sym_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
                   double &time_used, double &prec_err)
 {
-    clock_t start, end;
+    double start, end;
     prec_err = -1.0;
-    start = clock();
+    start = get_wall_time();
 
     // Begin ARPACK
     //
@@ -95,8 +95,9 @@ void eigs_sym_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
         delete [] resid;
 
         std::cout << "errors occured" << std::endl;
-        end = clock();
-        time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+        end = get_wall_time();
+        time_used = (end - start) * 1000;
+
         return;
     }
 
@@ -147,8 +148,9 @@ void eigs_sym_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
     if (ierr < 0)
     {
         std::cout << "errors occured" << std::endl;
-        end = clock();
-        time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+        end = get_wall_time();
+        time_used = (end - start) * 1000;
+
         return;
     }
 
@@ -160,8 +162,8 @@ void eigs_sym_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
     std::cout << "nops = " << niter << std::endl;
 */
 
-    end = clock();
-    time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+    end = get_wall_time();
+    time_used = (end - start) * 1000;
     MatrixXd err = M * evecs.leftCols(nev) - evecs.leftCols(nev) * evals.asDiagonal();
     prec_err = err.cwiseAbs().maxCoeff();
 }
@@ -171,9 +173,9 @@ void eigs_sym_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
 void eigs_gen_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
                   double &time_used, double &prec_err)
 {
-    clock_t start, end;
+    double start, end;
     prec_err = -1.0;
-    start = clock();
+    start = get_wall_time();
 
     // Begin ARPACK
     //
@@ -255,8 +257,8 @@ void eigs_gen_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
         delete [] resid;
 
         std::cout << "errors occured" << std::endl;
-        end = clock();
-        time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+        end = get_wall_time();
+        time_used = (end - start) * 1000;
 
         return;
     }
@@ -312,8 +314,8 @@ void eigs_gen_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
     if (ierr < 0)
     {
         std::cout << "errors occured" << std::endl;
-        end = clock();
-        time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+        end = get_wall_time();
+        time_used = (end - start) * 1000;
 
         return;
     }
@@ -329,6 +331,7 @@ void eigs_gen_F77(MatrixXd &M, VectorXd &init_resid, int k, int m,
     std::cout << "nops = " << niter << std::endl;
 */
 
-    end = clock();
-    time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+    end = get_wall_time();
+    time_used = (end - start) * 1000;
+    // std::cout << "nops77 = " << niter << std::endl;
 }

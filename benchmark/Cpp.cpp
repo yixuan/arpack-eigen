@@ -1,6 +1,6 @@
 #include <Eigen/Core>
 #include <iostream>
-#include <ctime>
+#include "timer.h"
 
 #include <SymEigsSolver.h>
 #include <GenEigsSolver.h>
@@ -14,8 +14,8 @@ using Eigen::VectorXcd;
 void eigs_sym_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m,
                   double &time_used, double &prec_err)
 {
-    clock_t start, end;
-    start = clock();
+    double start, end;
+    start = get_wall_time();
 
     DenseGenMatProd<double> op(M);
     SymEigsSolver< double, LARGEST_MAGN, DenseGenMatProd<double> > eigs(&op, k, m);
@@ -36,8 +36,8 @@ void eigs_sym_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m,
     std::cout << "nops = " << nops << std::endl;
 */
 
-    end = clock();
-    time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+    end = get_wall_time();
+    time_used = (end - start) * 1000;
 
     MatrixXd err = M * evecs - evecs * evals.asDiagonal();
     prec_err = err.cwiseAbs().maxCoeff();
@@ -48,8 +48,8 @@ void eigs_sym_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m,
 void eigs_gen_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m,
                   double &time_used, double &prec_err)
 {
-    clock_t start, end;
-    start = clock();
+    double start, end;
+    start = get_wall_time();
 
     DenseGenMatProd<double> op(M);
     GenEigsSolver< double, LARGEST_MAGN, DenseGenMatProd<double> > eigs(&op, k, m);
@@ -58,6 +58,7 @@ void eigs_gen_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m,
     int nconv = eigs.compute();
     int niter = eigs.num_iterations();
     int nops = eigs.num_operations();
+    // std::cout << "nops = " << nops << std::endl;
 
     VectorXcd evals = eigs.eigenvalues();
     MatrixXcd evecs = eigs.eigenvectors();
@@ -73,8 +74,8 @@ void eigs_gen_Cpp(MatrixXd &M, VectorXd &init_resid, int k, int m,
     std::cout << "||AU - UD||_inf = " << err.array().abs().maxCoeff() << std::endl;
 */
 
-    end = clock();
-    time_used = (end - start) / double(CLOCKS_PER_SEC) * 1000;
+    end = get_wall_time();
+    time_used = (end - start) * 1000;
 
     MatrixXcd err = M * evecs - evecs * evals.asDiagonal();
     prec_err = err.cwiseAbs().maxCoeff();
