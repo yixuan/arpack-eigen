@@ -2,7 +2,6 @@
 #define GEN_EIGS_SOLVER_H
 
 #include <Eigen/Core>
-#include <Eigen/Eigenvalues>
 
 #include <vector>
 #include <algorithm>
@@ -13,6 +12,7 @@
 
 #include "SelectionRule.h"
 #include "UpperHessenbergQR.h"
+#include "UpperHessenbergEigen.h"
 #include "DoubleShiftQR.h"
 #include "MatOp/DenseGenMatProd.h"
 #include "MatOp/DenseGenRealShiftSolve.h"
@@ -90,10 +90,6 @@ private:
     typedef std::complex<Scalar> Complex;
     typedef Eigen::Matrix<Complex, Eigen::Dynamic, Eigen::Dynamic> ComplexMatrix;
     typedef Eigen::Matrix<Complex, Eigen::Dynamic, 1> ComplexVector;
-
-    typedef Eigen::EigenSolver<Matrix> EigenSolver;
-    typedef Eigen::HouseholderQR<Matrix> QRdecomp;
-    typedef Eigen::HouseholderSequence<Matrix, Vector> QRQ;
 
     typedef std::pair<Complex, int> SortPair;
 
@@ -291,9 +287,9 @@ private:
     // Retrieve and sort ritz values and ritz vectors
     void retrieve_ritzpair()
     {
-        EigenSolver eig(fac_H);
-        ComplexVector evals = eig.eigenvalues();
-        ComplexMatrix evecs = eig.eigenvectors();
+        UpperHessenbergEigen<Scalar> decomp(fac_H);
+        ComplexVector evals = decomp.eigenvalues();
+        ComplexMatrix evecs = decomp.eigenvectors();
 
         std::vector<SortPair> pairs(ncv);
         EigenvalueComparator<Complex, SelectionRule> comp;
