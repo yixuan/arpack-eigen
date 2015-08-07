@@ -26,15 +26,14 @@ private:
 
     void compute_reflector(const Scalar &x1, const Scalar &x2, const Scalar &x3, int ind)
     {
-        Scalar tmp = x2 * x2 + x3 * x3;
-        Scalar r = std::sqrt(x1 * x1 + tmp);
-        if(r <= prec)
+        if(std::abs(x1) + std::abs(x2) + std::abs(x3) <= 3 * prec)
         {
             ref_u.col(ind).setZero();
             return;
         }
         // x1' = x1 - rho * ||x||
         // rho = -sign(x1)
+        Scalar tmp = x2 * x2 + x3 * x3;
         Scalar x1_new = x1 - ((x1 < 0) - (x1 > 0)) * std::sqrt(x1 * x1 + tmp);
         Scalar x_norm = std::sqrt(x1_new * x1_new + tmp);
         ref_u(0, ind) = x1_new / x_norm;
@@ -196,7 +195,7 @@ private:
 public:
     DoubleShiftQR() :
         n(0),
-        prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(2) / 3)),
+        prec(std::numeric_limits<Scalar>::epsilon()),
         computed(false)
     {}
 
@@ -206,7 +205,7 @@ public:
         shift_s(s),
         shift_t(t),
         ref_u(3, n),
-        prec(std::pow(std::numeric_limits<Scalar>::epsilon(), Scalar(2) / 3)),
+        prec(std::numeric_limits<Scalar>::epsilon()),
         computed(false)
     {
         compute(mat, s, t);
@@ -226,6 +225,8 @@ public:
         mat_H = mat.template triangularView<Eigen::Upper>();
         mat_H.diagonal(-1) = mat.diagonal(-1);
 
+        Scalar prec2 = std::min(std::pow(prec, Scalar(2) / 3), n * prec);
+
         // Obtain the indices of zero elements in the subdiagonal,
         // so that H can be divided into several blocks
         std::vector<int> zero_ind;
@@ -233,7 +234,7 @@ public:
         zero_ind.push_back(0);
         for(int i = 1; i < n - 1; i++)
         {
-            if(std::abs(mat_H(i, i - 1)) <= prec)
+            if(std::abs(mat_H(i, i - 1)) <= prec2)
             {
                 mat_H(i, i - 1) = 0;
                 zero_ind.push_back(i);
