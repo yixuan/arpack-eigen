@@ -4,10 +4,8 @@
 #include <Eigen/Core>
 
 #include <vector>
-#include <algorithm>
 #include <cmath>
 #include <complex>
-#include <utility>
 #include <stdexcept>
 
 #include "SelectionRule.h"

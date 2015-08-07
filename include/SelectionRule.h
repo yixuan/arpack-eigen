@@ -1,9 +1,12 @@
 #ifndef SELECTION_RULE_H
 #define SELECTION_RULE_H
 
+#include <vector>
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <utility>
+#include <stdexcept>
 
 ///
 /// \file SelectionRule.h
