@@ -9,10 +9,11 @@ HEADERS = $(wildcard ../include/MatOp/*.h) $(wildcard ../include/*.h)
 
 .PHONY: all test clean
 
-all: QR.out SymEigs.out SymEigsShift.out GenEigs.out GenEigsRealShift.out GenEigsComplexShift.out
+all: QR.out Eigen.out SymEigs.out SymEigsShift.out GenEigs.out GenEigsRealShift.out GenEigsComplexShift.out
 
 test:
 	-./QR.out
+	-./Eigen.out
 	-./SymEigs.out
 	-./SymEigsShift.out
 	-./GenEigs.out
