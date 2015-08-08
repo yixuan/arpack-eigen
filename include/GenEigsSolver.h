@@ -176,7 +176,7 @@ private:
         if(k >= ncv)
             return;
 
-        DoubleShiftQR<Scalar> decomp_ds;
+        DoubleShiftQR<Scalar> decomp_ds(ncv);
         UpperHessenbergQR<Scalar> decomp_hb;
         Matrix Q = Matrix::Identity(ncv, ncv);
 

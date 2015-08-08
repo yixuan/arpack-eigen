@@ -3,6 +3,9 @@
 
 #include <Eigen/Core>
 #include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 
 template <typename Scalar = double>
@@ -22,13 +25,16 @@ private:
     Scalar shift_t;     // Shift constant
     Matrix3X ref_u;     // Householder reflectors
     const Scalar prec;  // Approximately zero
+    const Scalar prec2;
     bool computed;      // Whether matrix has been factorized
 
     void compute_reflector(const Scalar &x1, const Scalar &x2, const Scalar &x3, int ind)
     {
+        Scalar *u = ref_u.data() + 3 * ind;
+
         if(std::abs(x1) + std::abs(x2) + std::abs(x3) <= 3 * prec)
         {
-            ref_u.col(ind).setZero();
+            u[0] = u[1] = u[2] = 0;
             return;
         }
         // x1' = x1 - rho * ||x||
@@ -36,9 +42,9 @@ private:
         Scalar tmp = x2 * x2 + x3 * x3;
         Scalar x1_new = x1 - ((x1 < 0) - (x1 > 0)) * std::sqrt(x1 * x1 + tmp);
         Scalar x_norm = std::sqrt(x1_new * x1_new + tmp);
-        ref_u(0, ind) = x1_new / x_norm;
-        ref_u(1, ind) = x2 / x_norm;
-        ref_u(2, ind) = x3 / x_norm;
+        u[0] = x1_new / x_norm;
+        u[1] = x2 / x_norm;
+        u[2] = x3 / x_norm;
     }
 
     void compute_reflector(const Scalar *x, int ind)
@@ -59,12 +65,13 @@ private:
         }
 
         // For block size == 2, do a Givens rotation on M = X * X - s * X + t * I
-        if(nrow == 2) {
+        if(nrow == 2)
+        {
             Scalar x = X(0, 0) * (X(0, 0) - shift_s) + X(0, 1) * X(1, 0) + shift_t;
             Scalar y = X(1, 0) * (X(0, 0) + X(1, 1) - shift_s);
             compute_reflector(x, y, 0, start_ind);
-            apply_PX(X.block(0, 0, 2, 2), start_ind);
-            apply_XP(X.block(0, 0, 2, 2), start_ind);
+            apply_PX(X.template block<2, 2>(0, 0), n, start_ind);
+            apply_XP(X.template block<2, 2>(0, 0), n, start_ind);
             compute_reflector(0, 0, 0, start_ind + 1);
             return;
         }
@@ -75,8 +82,8 @@ private:
         Scalar z = X(2, 1) * X(1, 0);
         compute_reflector(x, y, z, start_ind);
         // Apply the first reflector
-        apply_PX(X.template topRows<3>(), start_ind);
-        apply_XP(X.topLeftCorner(std::min(nrow, 4), 3), start_ind);
+        apply_PX(X.template topRows<3>(), n, start_ind);
+        apply_XP(X.topLeftCorner(std::min(nrow, 4), 3), n, start_ind);
 
         // Calculate the following reflectors
         // If entering this loop, nrow is at least 4.
@@ -84,54 +91,51 @@ private:
         {
             compute_reflector(&X(i, i - 1), start_ind + i);
             // Apply the reflector to X
-            apply_PX(X.block(i, i - 1, 3, nrow - i + 1), start_ind + i);
-            apply_XP(X.block(0, i, std::min(nrow, i + 4), 3), start_ind + i);
+            apply_PX(X.block(i, i - 1, 3, nrow - i + 1), n, start_ind + i);
+            apply_XP(X.block(0, i, std::min(nrow, i + 4), 3), n, start_ind + i);
         }
 
         // The last reflector
         compute_reflector(X(nrow - 2, nrow - 3), X(nrow - 1, nrow - 3), 0, start_ind + nrow - 2);
         // Apply the reflector to X
-        apply_PX(X.template block<2, 3>(nrow - 2, nrow - 3), start_ind + nrow - 2);
-        apply_XP(X.block(0, nrow - 2, nrow, 2), start_ind + nrow - 2);
+        apply_PX(X.template block<2, 3>(nrow - 2, nrow - 3), n, start_ind + nrow - 2);
+        apply_XP(X.block(0, nrow - 2, nrow, 2), n, start_ind + nrow - 2);
 
         compute_reflector(0, 0, 0, start_ind + nrow - 1);
     }
 
     // P = I - 2 * u * u' = P'
     // PX = X - 2 * u * (u'X)
-    void apply_PX(GenericMatrix X, int u_ind)
+    void apply_PX(GenericMatrix X, int stride, int u_ind)
     {
-        const Scalar sqrt_2 = std::sqrt(Scalar(2));
+        Scalar *u = ref_u.data() + 3 * u_ind;
+        Scalar u2_abs = std::abs(u[2]);
 
-        Scalar u0 = sqrt_2 * ref_u(0, u_ind),
-               u1 = sqrt_2 * ref_u(1, u_ind),
-               u2 = sqrt_2 * ref_u(2, u_ind);
-
-        if(std::abs(u0) + std::abs(u1) + std::abs(u2) <= 3 * sqrt_2 * prec)
+        if(std::abs(u[0]) + std::abs(u[1]) + u2_abs <= 3 * prec)
             return;
 
         const int nrow = X.rows();
         const int ncol = X.cols();
+        const Scalar u0_2 = 2 * u[0];
+        const Scalar u1_2 = 2 * u[1];
 
-        if(nrow == 2)
+        Scalar *xptr = X.data();
+        if(u2_abs <= prec || nrow == 2)
         {
-            Scalar *xptr;
-            for(int i = 0; i < ncol; i++)
+            for(int i = 0; i < ncol; i++, xptr += stride)
             {
-                xptr = &X(0, i);
-                Scalar tmp = u0 * xptr[0] + u1 * xptr[1];
-                xptr[0] -= tmp * u0;
-                xptr[1] -= tmp * u1;
+                Scalar tmp = u0_2 * xptr[0] + u1_2 * xptr[1];
+                xptr[0] -= tmp * u[0];
+                xptr[1] -= tmp * u[1];
             }
         } else {
-            Scalar *xptr;
-            for(int i = 0; i < ncol; i++)
+            const Scalar u2_2 = 2 * u[2];
+            for(int i = 0; i < ncol; i++, xptr += stride)
             {
-                xptr = &X(0, i);
-                Scalar tmp = u0 * xptr[0] + u1 * xptr[1] + u2 * xptr[2];
-                xptr[0] -= tmp * u0;
-                xptr[1] -= tmp * u1;
-                xptr[2] -= tmp * u2;
+                Scalar tmp = u0_2 * xptr[0] + u1_2 * xptr[1] + u2_2 * xptr[2];
+                xptr[0] -= tmp * u[0];
+                xptr[1] -= tmp * u[1];
+                xptr[2] -= tmp * u[2];
             }
         }
     }
@@ -158,44 +162,49 @@ private:
     }
 
     // XP = X - 2 * (X * u) * u'
-    void apply_XP(GenericMatrix X, int u_ind)
+    void apply_XP(GenericMatrix X, int stride, int u_ind)
     {
-        const Scalar sqrt_2 = std::sqrt(Scalar(2));
-        Scalar u0 = sqrt_2 * ref_u(0, u_ind),
-               u1 = sqrt_2 * ref_u(1, u_ind),
-               u2 = sqrt_2 * ref_u(2, u_ind);
+        Scalar *u = ref_u.data() + 3 * u_ind;
+        Scalar u2_abs = std::abs(u[2]);
 
-        if(std::abs(u0) + std::abs(u1) + std::abs(u2) <= 3 * sqrt_2 * prec)
+        if(std::abs(u[0]) + std::abs(u[1]) + u2_abs <= 3 * prec)
             return;
 
         const int nrow = X.rows();
         const int ncol = X.cols();
-        Scalar *X0 = &X(0, 0), *X1 = &X(0, 1);
+        const Scalar u0_2 = 2 * u[0];
+        const Scalar u1_2 = 2 * u[1];
+        Scalar *X0 = X.data(), *X1 = X0 + stride;  // X0 => X.col(0), X1 => X.col(1)
 
-        if(ncol == 2)
+        if(u2_abs <= prec || ncol == 2)
         {
+            // tmp = 2 * u0 * X0 + 2 * u1 * X1
+            // X0 => X0 - u0 * tmp
+            // X1 => X1 - u1 * tmp
             for(int i = 0; i < nrow; i++)
             {
-                Scalar tmp = u0 * X0[i] + u1 * X1[i];
-                X0[i] -= tmp * u0;
-                X1[i] -= tmp * u1;
+                Scalar tmp = u0_2 * X0[i] + u1_2 * X1[i];
+                X0[i] -= tmp * u[0];
+                X1[i] -= tmp * u[1];
             }
         } else {
-            Scalar *X2 = &X(0, 2);
+            Scalar *X2 = X1 + stride;  // X2 => X.col(2)
+            const Scalar u2_2 = 2 * u[2];
             for(int i = 0; i < nrow; i++)
             {
-                Scalar tmp = u0 * X0[i] + u1 * X1[i] + u2 * X2[i];
-                X0[i] -= tmp * u0;
-                X1[i] -= tmp * u1;
-                X2[i] -= tmp * u2;
+                Scalar tmp = u0_2 * X0[i] + u1_2 * X1[i] + u2_2 * X2[i];
+                X0[i] -= tmp * u[0];
+                X1[i] -= tmp * u[1];
+                X2[i] -= tmp * u[2];
             }
         }
     }
 
 public:
-    DoubleShiftQR() :
-        n(0),
+    DoubleShiftQR(int size) :
+        n(size),
         prec(std::numeric_limits<Scalar>::epsilon()),
+        prec2(std::min(std::pow(prec, Scalar(2) / 3), n * prec)),
         computed(false)
     {}
 
@@ -206,6 +215,7 @@ public:
         shift_t(t),
         ref_u(3, n),
         prec(std::numeric_limits<Scalar>::epsilon()),
+        prec2(std::min(std::pow(prec, Scalar(2) / 3), n * prec)),
         computed(false)
     {
         compute(mat, s, t);
@@ -222,23 +232,26 @@ public:
         shift_t = t;
         ref_u.resize(3, n);
 
-        mat_H = mat.template triangularView<Eigen::Upper>();
-        mat_H.diagonal(-1) = mat.diagonal(-1);
-
-        Scalar prec2 = std::min(std::pow(prec, Scalar(2) / 3), n * prec);
+        // Make a copy of mat
+        std::copy(mat.data(), mat.data() + mat.size(), mat_H.data());
 
         // Obtain the indices of zero elements in the subdiagonal,
         // so that H can be divided into several blocks
         std::vector<int> zero_ind;
         zero_ind.reserve(n - 1);
         zero_ind.push_back(0);
-        for(int i = 1; i < n - 1; i++)
+        Scalar *Hii = mat_H.data();
+        for(int i = 0; i < n - 2; i++, Hii += (n + 1))
         {
-            if(std::abs(mat_H(i, i - 1)) <= prec2)
+            // Hii[1] => mat_H(i + 1, i)
+            if(std::abs(Hii[1]) <= prec2)
             {
-                mat_H(i, i - 1) = 0;
-                zero_ind.push_back(i);
+                Hii[1] = 0;
+                zero_ind.push_back(i + 1);
             }
+            // Make sure mat_H is upper Hessenberg
+            // Zero the elements below mat_H(i + 1, i)
+            std::fill(Hii + 2, Hii + n - i, Scalar(0));
         }
         zero_ind.push_back(n);
 
@@ -254,7 +267,7 @@ public:
             {
                 for(int j = start; j < end; j++)
                 {
-                    apply_PX(mat_H.block(j, end + 1, std::min(3, end - j + 1), n - 1 - end), j);
+                    apply_PX(mat_H.block(j, end + 1, std::min(3, end - j + 1), n - 1 - end), n, j);
                 }
             }
             // Apply reflectors to the block above X
@@ -262,7 +275,7 @@ public:
             {
                 for(int j = start; j < end; j++)
                 {
-                    apply_XP(mat_H.block(0, j, start, std::min(3, end - j + 1)), j);
+                    apply_XP(mat_H.block(0, j, start, std::min(3, end - j + 1)), n, j);
                 }
             }
         }
@@ -302,9 +315,9 @@ public:
         int nrow = Y.rows();
         for(int i = 0; i < n - 2; i++)
         {
-            apply_XP(Y.block(0, i, nrow, 3), i);
+            apply_XP(Y.block(0, i, nrow, 3), nrow, i);
         }
-        apply_XP(Y.block(0, n - 2, nrow, 2), n - 2);
+        apply_XP(Y.block(0, n - 2, nrow, 2), nrow, n - 2);
     }
 };
 
