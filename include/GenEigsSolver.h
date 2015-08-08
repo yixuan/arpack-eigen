@@ -6,6 +6,7 @@
 #include <vector>
 #include <cmath>
 #include <complex>
+#include <limits>
 #include <stdexcept>
 
 #include "SelectionRule.h"
