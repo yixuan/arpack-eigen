@@ -217,7 +217,7 @@ private:
                 fac_H.diagonal().array() += ritz_val[i].real();
             }
         }
-        // V -> VQ
+        // V -> VQ, only need to update the first k+1 columns
         // Q has some elements being zero
         // The first (ncv - k + i) elements of the i-th column of Q are non-zero
         Matrix Vs(dim_n, k + 1);

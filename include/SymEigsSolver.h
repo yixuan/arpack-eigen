@@ -141,8 +141,8 @@ private:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
     typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> Array;
     typedef Eigen::Array<bool, Eigen::Dynamic, 1> BoolArray;
-    typedef Eigen::Map<const Matrix> MapMat;
-    typedef Eigen::Map<const Vector> MapVec;
+    typedef Eigen::Map<Matrix> MapMat;
+    typedef Eigen::Map<Vector> MapVec;
     typedef Eigen::SelfAdjointEigenSolver<Matrix> EigenSolver;
 
 protected:
@@ -183,7 +183,7 @@ private:
 
         fac_f = fk;
 
-        Vector v(dim_n), w(dim_n);
+        Vector w(dim_n);
         Scalar beta = 0.0, Hii = 0.0;
         // Keep the upperleft k x k submatrix of H and set other elements to 0
         fac_H.rightCols(ncv - from_k).setZero();
@@ -191,8 +191,8 @@ private:
         for(int i = from_k; i <= to_m - 1; i++)
         {
             beta = fac_f.norm();
+            MapVec v(&fac_V(0, i), dim_n); // The (i+1)-th column
             v.noalias() = fac_f / beta;
-            fac_V.col(i) = v; // The (i+1)-th column
             fac_H(i, i - 1) = beta;
 
             op->perform_op(v.data(), w.data());
@@ -225,9 +225,7 @@ private:
             return;
 
         TridiagQR<Scalar> decomp;
-        Vector em(ncv);
-        em.setZero();
-        em[ncv - 1] = 1;
+        Matrix Q = Matrix::Identity(ncv, ncv);
 
         for(int i = k; i < ncv; i++)
         {
@@ -235,18 +233,30 @@ private:
             fac_H.diagonal().array() -= ritz_val[i];
             decomp.compute(fac_H);
 
-            // V -> VQ
-            decomp.apply_YQ(fac_V);
+            // Q -> Q * Qi
+            decomp.apply_YQ(Q);
             // H -> Q'HQ
             // Since QR = H - mu * I, we have H = QR + mu * I
             // and therefore Q'HQ = RQ + mu * I
             fac_H = decomp.matrix_RQ();
             fac_H.diagonal().array() += ritz_val[i];
-            // em -> Q'em
-            decomp.apply_QtY(em);
         }
+        // V -> VQ, only need to update the first k+1 columns
+        // Q has some elements being zero
+        // The first (ncv - k + i) elements of the i-th column of Q are non-zero
+        Matrix Vs(dim_n, k + 1);
+        int nnz;
+        for(int i = 0; i < k; i++)
+        {
+            nnz = ncv - k + i + 1;
+            MapMat V(fac_V.data(), dim_n, nnz);
+            MapVec q(&Q(0, i), nnz);
+            Vs.col(i).noalias() = V * q;
+        }
+        Vs.col(k).noalias() = fac_V * Q.col(k);
+        fac_V.leftCols(k + 1).noalias() = Vs;
 
-        Vector fk = fac_f * em[k - 1] + fac_V.col(k) * fac_H(k, k - 1);
+        Vector fk = fac_f * Q(ncv - 1, k - 1) + fac_V.col(k) * fac_H(k, k - 1);
         factorize_from(k, ncv, fk);
         retrieve_ritzpair();
     }
