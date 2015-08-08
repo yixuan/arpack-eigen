@@ -1,12 +1,12 @@
 #ifndef SELECTION_RULE_H
 #define SELECTION_RULE_H
 
-#include <vector>
-#include <algorithm>
-#include <cmath>
-#include <complex>
-#include <utility>
-#include <stdexcept>
+#include <vector>     // std::vector
+#include <cmath>      // std::abs
+#include <algorithm>  // std::sort
+#include <complex>    // std::complex
+#include <utility>    // std::pair
+#include <stdexcept>  // std::invalid_argument
 
 ///
 /// \file SelectionRule.h

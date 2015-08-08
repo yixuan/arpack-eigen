@@ -2,7 +2,10 @@
 #define UPPER_HESSENBERG_QR_H
 
 #include <Eigen/Core>
-#include <stdexcept>
+#include <cmath>      // std::sqrt
+#include <algorithm>  // std::fill, std::copy
+#include <limits>     // std::numeric_limits
+#include <stdexcept>  // std::logic_error
 
 ///
 /// \defgroup LinearAlgebra Linear Algebra
@@ -84,14 +87,18 @@ public:
         rot_cos.resize(n - 1);
         rot_sin.resize(n - 1);
 
-        mat_T = mat.template triangularView<Eigen::Upper>();
-        mat_T.diagonal(-1) = mat.diagonal(-1);
+        std::copy(mat.data(), mat.data() + mat.size(), mat_T.data());
 
         Scalar xi, xj, r, c, s, eps = std::numeric_limits<Scalar>::epsilon();
         Scalar *Tii, *ptr;
         for(int i = 0; i < n - 1; i++)
         {
             Tii = &mat_T(i, i);
+
+            // Make sure mat_T is upper Hessenberg
+            // Zero the elements below mat_T(i + 1, i)
+            std::fill(Tii + 2, Tii + n - i, Scalar(0));
+
             xi = Tii[0];  // mat_T(i, i)
             xj = Tii[1];  // mat_T(i + 1, i)
             r = std::sqrt(xi * xi + xj * xj);

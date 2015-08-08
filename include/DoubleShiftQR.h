@@ -2,11 +2,11 @@
 #define DOUBLE_SHIFT_QR_H
 
 #include <Eigen/Core>
-#include <vector>
-#include <algorithm>
-#include <cmath>
-#include <limits>
-#include <stdexcept>
+#include <vector>     // std::vector
+#include <algorithm>  // std::min, std::fill, std::copy
+#include <cmath>      // std::abs, std::sqrt, std::pow
+#include <limits>     // std::numeric_limits
+#include <stdexcept>  // std::invalid_argument, std::logic_error
 
 template <typename Scalar = double>
 class DoubleShiftQR

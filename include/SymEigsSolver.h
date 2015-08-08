@@ -3,11 +3,11 @@
 
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
-
-#include <vector>
-#include <cmath>
-#include <limits>
-#include <stdexcept>
+#include <vector>     // std::vector
+#include <cmath>      // std::abs, std::pow
+#include <algorithm>  // std::min, std::copy
+#include <limits>     // std::numeric_limits
+#include <stdexcept>  // std::invalid_argument
 
 #include "SelectionRule.h"
 #include "UpperHessenbergQR.h"
