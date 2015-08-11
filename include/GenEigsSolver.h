@@ -647,7 +647,7 @@ private:
 
         // Select an arbitrary real shift value
         Scalar r = sigmar + std::sin(sigmar);
-        this->op->set_shift(sigmar, 0);
+        this->op->set_shift(r, 0);
 
         ComplexArray v;
         Array v_real, v_imag;
