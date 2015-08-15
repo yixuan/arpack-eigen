@@ -521,6 +521,8 @@ public:
     ///
     /// Returning the eigenvectors associated with the converged eigenvalues.
     ///
+    /// \param nvec The number of eigenvectors to return.
+    ///
     /// \return A matrix containing the eigenvectors.
     /// Returned matrix type will be `Eigen::Matrix<Scalar, ...>`,
     /// depending on the template parameter `Scalar` defined.
@@ -550,6 +552,9 @@ public:
         return res;
     }
 
+    ///
+    /// Returning all converged eigenvectors.
+    ///
     Matrix eigenvectors()
     {
         return eigenvectors(nev);

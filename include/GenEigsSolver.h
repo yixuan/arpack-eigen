@@ -489,6 +489,8 @@ public:
     ///
     /// Returning the eigenvectors associated with the converged eigenvalues.
     ///
+    /// \param nvec The number of eigenvectors to return.
+    ///
     /// \return A complex-valued matrix containing the eigenvectors.
     /// Returned matrix type will be `Eigen::Matrix<std::complex<Scalar>, ...>`,
     /// depending on the template parameter `Scalar` defined.
@@ -518,6 +520,9 @@ public:
         return res;
     }
 
+    ///
+    /// Returning all converged eigenvectors.
+    ///
     ComplexMatrix eigenvectors()
     {
         return eigenvectors(nev);
