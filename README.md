@@ -1,5 +1,9 @@
 # ARPACK-Eigen
 
+> **NOTE**: **ARPACK-Eigen** has been renamed to
+[Spectra](https://github.com/yixuan/spectra), and all future development
+will happen there. This repository is kept as an archive.
+
 **ARPACK-Eigen** is a redesign of the [ARPACK](http://www.caam.rice.edu/software/ARPACK/)
 software for large scale eigenvalue problems, built on top of
 [Eigen](http://eigen.tuxfamily.org), an open source C++ linear algebra library.
@@ -22,7 +26,7 @@ To use the eigen solvers in this library, the user does not need to directly
 provide the whole matrix, but instead, the algorithm only requires certain operations
 defined on `A`, and in the basic setting, it is simply the matrix-vector
 multiplication. Therefore, if the matrix-vector product `A * x` can be computed
-efficiently, which is the case when `A` is sparse, **ARPACK-Armadillo**
+efficiently, which is the case when `A` is sparse, **ARPACK-Eigen**
 will be very powerful for large scale eigenvalue problems.
 
 There are two major steps to use the **ARPACK-Eigen** library:
