@@ -1,8 +1,8 @@
-# ARPACK-Eigen
-
 > **NOTE**: **ARPACK-Eigen** has been renamed to
 [Spectra](https://github.com/yixuan/spectra), and all future development
 will happen there. This repository is kept as an archive.
+
+# ARPACK-Eigen
 
 **ARPACK-Eigen** is a redesign of the [ARPACK](http://www.caam.rice.edu/software/ARPACK/)
 software for large scale eigenvalue problems, built on top of
